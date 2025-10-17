@@ -171,37 +171,8 @@ class SoilAnalysisService:
     def __init__(self):
         """Servis başlatıcı - dosya yollarını kontrol et"""
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # Veri klasörü çözümleme:
-        # - Öncelikle 'SOIL_DATA_DIR' ortam değişkeni tanımlıysa onu kullan
-        # - Sonra bu dosyanın yanındaki 'Data' klasörünü dene
-        # - Ardından mevcut klasörü dene (geriye dönük uyumluluk)
-        # - Son olarak üst dizindeki 'Data' klasörünü dene
-        env_data_dir = os.getenv('SOIL_DATA_DIR')
-        candidate_dirs = [
-            os.path.abspath(env_data_dir) if env_data_dir else None,
-            os.path.join(self.script_dir, 'Data'),
-            self.script_dir,
-            os.path.join(os.path.dirname(self.script_dir), 'Data')
-        ]
-        candidate_dirs = [d for d in candidate_dirs if d and os.path.isdir(d)]
-
-        data_dir = None
-        for d in candidate_dirs:
-            raster_path = os.path.join(d, 'HWSD2.bil')
-            db_path = os.path.join(d, 'HWSD2.mdb')
-            if os.path.exists(raster_path) and os.path.exists(db_path):
-                data_dir = d
-                break
-
-        # Eğer tam eşleşme bulunamazsa, mevcut adaylardan ilkini kullan
-        # (aşağıdaki varlık kontrolleri hatayı açıklayıcı şekilde verecek)
-        if not data_dir:
-            data_dir = candidate_dirs[0] if candidate_dirs else os.path.join(self.script_dir, 'Data')
-
-        self.data_dir = data_dir
-        self.raster_file = os.path.join(self.data_dir, 'HWSD2.bil')
-        self.db_file = os.path.join(self.data_dir, 'HWSD2.mdb')
+        self.raster_file = os.path.join(self.script_dir, 'HWSD2.bil')
+        self.db_file = os.path.join(self.script_dir, 'HWSD2.mdb')
         
         # Dosya varlığını kontrol et
         if not os.path.exists(self.raster_file):

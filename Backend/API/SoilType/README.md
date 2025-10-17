@@ -1,6 +1,7 @@
-# 🌍 Soil Analysis API
+# 🌍 Soil Analysis API - New Router/Service Structure
 
 HWSD2 (Harmonized World Soil Database) veritabanını kullanarak toprak analizi yapan FastAPI servisi.
+Yeni modüler yapı: Router/Service ayrımı ile daha sürdürülebilir kod organizasyonu.
 
 ## 🚀 Kurulum
 
@@ -10,9 +11,9 @@ pip install -r requirements.txt
 ```
 
 ### Gerekli Dosyalar
-- `HWSD2.bil` - Raster harita dosyası
-- `HWSD2.mdb` - Veritabanı dosyası
-- `HWSD2.hdr` - Header dosyası (opsiyonel)
+- `Data/HWSD2.bil` - Raster harita dosyası
+- `Data/HWSD2.mdb` - Veritabanı dosyası
+- `Data/HWSD2.hdr` - Header dosyası (opsiyonel)
 
 ## 🏃‍♂️ Çalıştırma
 
@@ -20,13 +21,14 @@ pip install -r requirements.txt
 
 #### **1. Gerekli Dosyaları Kontrol Edin:**
 ```bash
-# Proje dizininde şu dosyaların olduğundan emin olun:
-ls HWSD2.bil HWSD2.mdb HWSD2.hdr
+# Data klasöründe şu dosyaların olduğundan emin olun:
+ls Data/HWSD2.bil Data/HWSD2.mdb Data/HWSD2.hdr
 ```
 
 #### **2. API'yi Başlatın:**
 ```bash
-python soil_api.py
+# Ana dizinden (Backend/API/ klasöründe)
+python -m uvicorn main:app --reload
 ```
 
 #### **3. Başarılı Başlatma Mesajları:**
@@ -42,7 +44,8 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 - **Ana URL**: http://localhost:8000
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+- **Soil Analysis**: http://localhost:8000/soiltype/
+- **Health Check**: http://localhost:8000/soiltype/health
 
 ### **API Başlatma Sorunları ve Çözümleri:**
 
@@ -74,7 +77,7 @@ A module that was compiled using NumPy 1.x cannot be run in NumPy 2.3.4
 pip install "numpy<2.0.0" --force-reinstall
 
 # API'yi başlat
-python soil_api.py
+python -m uvicorn main:app --reload
 ```
 
 
@@ -82,12 +85,12 @@ python soil_api.py
 
 #### **1. Health Check:**
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/soiltype/health
 ```
 
 #### **2. PowerShell ile Test:**
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:8000/health" -Method GET
+Invoke-WebRequest -Uri "http://localhost:8000/soiltype/health" -Method GET
 ```
 
 #### **3. Browser ile Test:**
@@ -97,23 +100,29 @@ Invoke-WebRequest -Uri "http://localhost:8000/health" -Method GET
 ### 🚀 Hızlı Test
 ```bash
 # API'yi başlat
-python soil_api.py
+python -m uvicorn main:app --reload
 
 # Başka terminal'de test et
-curl http://localhost:8000/health
+curl http://localhost:8000/soiltype/health
 ```
 
 ## 🧪 Test Script Kullanımı
 
 ### **İnteraktif Test Script**
 ```bash
+# Yeni router/service yapısı için test
+python test_new_api.py
+
+# Eski test (hala çalışır)
 python test_api.py
 ```
 
 Bu script size şu seçenekleri sunar:
-1. **Manuel koordinat girişi** - Kendi koordinatlarınızı girin
-2. **Otomatik konum tespiti** - IP adresinizden konum tespit eder
-3. **Çıkış** - Test scriptini sonlandırır
+1. **Manuel koordinat girişi (POST)** - JSON body ile
+2. **Manuel koordinat girişi (GET)** - URL parametreleri ile
+3. **Otomatik konum tespiti** - IP adresinizden konum tespit eder
+4. **API bilgilerini görüntüle** - Endpoint listesi
+5. **Çıkış** - Test scriptini sonlandırır
 
 ### **Test Script Özellikleri:**
 - ✅ **İnteraktif menü** - Kolay kullanım
@@ -126,24 +135,30 @@ Bu script size şu seçenekleri sunar:
 
 #### **1. API'yi Başlatın:**
 ```bash
-python soil_api.py
+python -m uvicorn main:app --reload
 ```
 
 #### **2. Test Script'i Çalıştırın:**
 ```bash
+# Yeni yapı için
+python test_new_api.py
+
+# Veya eski test
 python test_api.py
 ```
 
 #### **3. Menüden Seçim Yapın:**
 ```
-🌍 Soil Analysis API Test
+🌍 Soil Analysis API Test - New Structure
 ========================================
 Analiz yöntemini seçin:
-1. Manuel koordinat girişi
-2. Otomatik konum tespiti
-3. Çıkış
+1. Manuel koordinat girişi (POST)
+2. Manuel koordinat girişi (GET)
+3. Otomatik konum tespiti
+4. API bilgilerini görüntüle
+5. Çıkış
 
-Seçiminiz (1-3): 
+Seçiminiz (1-5): 
 ```
 
 #### **4. Manuel Koordinat Girişi (Seçenek 1):**
@@ -238,10 +253,10 @@ Konumunuz algılanıyor... (Bu işlem biraz sürebilir)
 ### **Adım 1: Proje Hazırlığı**
 ```bash
 # 1. Proje dizinine gidin
-cd "C:\Users\Eren\Desktop\Stuff\Kairu\Aidea\Soil Map\MapPy"
+cd "Backend/API"
 
 # 2. Gerekli dosyaları kontrol edin
-ls HWSD2.bil HWSD2.mdb HWSD2.hdr soil_api.py test_api.py
+ls Data/HWSD2.bil Data/HWSD2.mdb Data/HWSD2.hdr main.py router.py service.py test_new_api.py
 
 # 3. Python dependencies'leri yükleyin
 pip install -r requirements.txt
@@ -250,7 +265,7 @@ pip install -r requirements.txt
 ### **Adım 2: API'yi Başlatın**
 ```bash
 # Terminal 1: API'yi başlat
-python soil_api.py
+python -m uvicorn main:app --reload
 ```
 
 **Başarılı başlatma çıktısı:**
@@ -265,19 +280,21 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ### **Adım 3: Test Script'i Çalıştırın**
 ```bash
 # Terminal 2: Test script'i başlat
-python test_api.py
+python test_new_api.py
 ```
 
 ### **Adım 4: İnteraktif Test Menüsü**
 ```
-🌍 Soil Analysis API Test
+🌍 Soil Analysis API Test - New Structure
 ========================================
 Analiz yöntemini seçin:
-1. Manuel koordinat girişi
-2. Otomatik konum tespiti
-3. Çıkış
+1. Manuel koordinat girişi (POST)
+2. Manuel koordinat girişi (GET)
+3. Otomatik konum tespiti
+4. API bilgilerini görüntüle
+5. Çıkış
 
-Seçiminiz (1-3): 
+Seçiminiz (1-5): 
 ```
 
 ### **Adım 5: Test Seçenekleri**
@@ -407,12 +424,17 @@ Başka bir test yapmak ister misiniz? (e/h): h
 
 #### 1. Health Check
 ```http
-GET {{base_url}}/health
+GET {{base_url}}/soiltype/health
 ```
 
-#### 2. Manuel Koordinat Analizi
+#### 2. API Bilgileri
 ```http
-POST {{base_url}}/analyze
+GET {{base_url}}/soiltype/
+```
+
+#### 3. Manuel Koordinat Analizi (POST)
+```http
+POST {{base_url}}/soiltype/analyze
 Content-Type: application/json
 
 {
@@ -422,9 +444,14 @@ Content-Type: application/json
 }
 ```
 
-#### 3. Otomatik Konum Tespiti
+#### 4. Manuel Koordinat Analizi (GET)
 ```http
-POST {{base_url}}/analyze/auto
+GET {{base_url}}/soiltype/analyze?longitude=1.0&latitude=49.0
+```
+
+#### 5. Otomatik Konum Tespiti
+```http
+POST {{base_url}}/soiltype/analyze/auto
 Content-Type: application/json
 
 {
@@ -537,9 +564,19 @@ Content-Type: application/json
 
 ## 🔧 API Endpoints
 
-### 1. Manuel Koordinat Analizi
+### 1. API Bilgileri
 ```http
-POST /analyze
+GET /soiltype/
+```
+
+### 2. Sağlık Kontrolü
+```http
+GET /soiltype/health
+```
+
+### 3. Manuel Koordinat Analizi (POST)
+```http
+POST /soiltype/analyze
 Content-Type: application/json
 
 {
@@ -549,19 +586,19 @@ Content-Type: application/json
 }
 ```
 
-### 2. Otomatik Konum Tespiti
+### 4. Manuel Koordinat Analizi (GET)
 ```http
-POST /analyze/auto
+GET /soiltype/analyze?longitude=1.0&latitude=49.0
+```
+
+### 5. Otomatik Konum Tespiti
+```http
+POST /soiltype/analyze/auto
 Content-Type: application/json
 
 {
     "method": "Auto"
 }
-```
-
-### 3. Sağlık Kontrolü
-```http
-GET /health
 ```
 
 ## 📊 Yanıt Formatı
@@ -645,7 +682,7 @@ GET /health
 import requests
 
 # Manuel analiz
-response = requests.post("http://localhost:8000/analyze", json={
+response = requests.post("http://localhost:8000/soiltype/analyze", json={
     "method": "Manual",
     "longitude": 1.0,
     "latitude": 49.0
@@ -658,13 +695,16 @@ print(f"WRB4: {result['classification']['wrb4_code']}")
 
 ### cURL ile Kullanım
 ```bash
-# Manuel analiz
-curl -X POST "http://localhost:8000/analyze" \
+# Manuel analiz (POST)
+curl -X POST "http://localhost:8000/soiltype/analyze" \
      -H "Content-Type: application/json" \
      -d '{"method": "Manual", "longitude": 1.0, "latitude": 49.0}'
 
+# Manuel analiz (GET)
+curl "http://localhost:8000/soiltype/analyze?longitude=1.0&latitude=49.0"
+
 # Otomatik analiz
-curl -X POST "http://localhost:8000/analyze/auto" \
+curl -X POST "http://localhost:8000/soiltype/analyze/auto" \
      -H "Content-Type: application/json" \
      -d '{"method": "Auto"}'
 ```
@@ -693,15 +733,15 @@ Log formatı:
 ## 🔧 Geliştirme
 
 ### Yeni Özellik Ekleme
-1. `SoilAnalysisService` sınıfına yeni method ekle
+1. `service.py` dosyasındaki `SoilAnalysisService` sınıfına yeni method ekle
 2. Pydantic modeli güncelle
-3. Endpoint ekle
+3. `router.py` dosyasına endpoint ekle
 4. Test yaz
 
 ### Debugging
 ```bash
 # Debug modunda çalıştır
-uvicorn soil_api:app --reload --log-level debug
+uvicorn main:app --reload --log-level debug
 ```
 
 ## 📋 TODO
