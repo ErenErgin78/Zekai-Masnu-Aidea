@@ -116,7 +116,11 @@ plt.figure(figsize=(9, 7))
 sns.heatmap(
     df.select_dtypes(include=[np.number]).corr(),
     cmap="coolwarm",
-    annot=False,
+    annot=True,  # ✅ Bu satır sayıları göstermeyi sağlar
+    fmt=".2f",   # ✅ Sayı formatı: 2 ondalık basamak
+    cbar_kws={"shrink": .8}, # ✅ Renk barı boyutu
+    linewidths=0.5, # ✅ Hücre arası çizgiler
+    annot_kws={"size": 10} # ✅ Sayıların font boyutu
 )
 plt.title("Korelasyon Matrisi (sayısal)")
 plt.tight_layout()
