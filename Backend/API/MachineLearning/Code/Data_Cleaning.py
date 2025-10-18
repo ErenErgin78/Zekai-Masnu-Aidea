@@ -24,8 +24,8 @@ from sklearn.preprocessing import StandardScaler
 
 # ---------- 1) VERİYİ YÜKLE ----------
 # Orijinal ham dosya (Kaggle.csv) ; ile ayrılmış
-RAW_PATH = r"C:\Users\ATIF\Downloads\Kaggle.csv"
-CLEAN_PATH = r"C:\Users\ATIF\Downloads\Crop_Soil_Cleaned.csv"
+RAW_PATH = r"C:\Users\HUSOCAN\Desktop\Projelerim\Zekai-Masnu-Aidea\Backend\API\MachineLearning\Data\Kaggle.csv"
+CLEAN_PATH = r"C:\Users\HUSOCAN\Desktop\Projelerim\Zekai-Masnu-Aidea\Backend\API\MachineLearning\Data\Crop_Soil_Final.csv"
 
 df = pd.read_csv(RAW_PATH, encoding="ISO-8859-1", sep=";")
 print(f"✅ Ham veri yüklendi: {df.shape}")
