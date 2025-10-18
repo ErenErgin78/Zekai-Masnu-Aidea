@@ -94,3 +94,7 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+
+# Vector Veritabanı
+.sqlite3
+vector_store/
