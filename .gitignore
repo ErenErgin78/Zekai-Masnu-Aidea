@@ -99,4 +99,4 @@ coverage.xml
 .sqlite3
 vector_store/
 
-.bil
+*.bil
