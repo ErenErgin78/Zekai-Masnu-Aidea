@@ -102,3 +102,4 @@ dergipark_pdfs/
 .sqlite3
 vector_store/
 *.bil
+mgm_iklim_verileri.csv
