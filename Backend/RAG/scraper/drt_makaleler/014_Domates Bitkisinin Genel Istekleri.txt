@@ -1,0 +1,70 @@
+Başlık: Domates Bitkisinin Genel İstekleri
+==================================================
+
+1 İklim
+
+1.2 Sıcaklık
+
+Domates ılıman iklim sebzesidir. İdeal sıcaklık ortalaması 18°C ve 27°C arasındadır. Bu nedenle kuzey ve güney yarım kürenin 30. ve 40. paralelleri arasında kalan ılıman bölgelerde dış koşullarda yetiştiriciliği kolaylıkla yapılabilmektedir. 10°C nin altındaki sıcaklıklar çiçek oluşumu üzerine olumsuz etki etmekte ve gece donlarında ürün ciddi zararlar almaktadır (Resim 1).
+
+Resim 1. Don Zararı
+
+35°C üzerindeki sıcaklık ve düşük nem koşullarında kuruluk nedeniyle polen canlılığı şiddetli bir şekilde azalırken çiçek dökümleri meydana gelir. Dengeli beslenme koşullarında bu yüksek sıcaklıklar altında çiçek dökümlerinin dengesiz beslenmeye oranla daha az olduğu saptanmıştır.
+
+1.2 Işık
+
+Global ısınma fotosentez boyunca yapraklarda üretilen şeker miktarını belirlemektedir. Yüksek orandaki şeker üretimi fazla sayıdaki meyveyi destekleyecek ve böylece de domateste yüksek verim elde edilmesine olanak sağlayacaktır.Çiçeklenme için en az günlük 6 saat ışıklanmaya ihtiyaç duyan domates az ışığa karşı duyarlıdır. Gün uzunluğu domates üretiminde belirleyici bir faktör olmadığından, sera yetiştiriciliğini de içine alan geniş bölgelerde üretim yapılabilmektedir.
+
+Solar ısınımın yüksek olduğu koşullar meyve yarılmalarına, güneş yanıklığına ve olgunluk döneminde dengesiz renk oluşumlarına neden olur. Yeterli yapraklanma güneş yanıklarına karşı korunmada yardımcı olur. Uygun potasyum ve kalsiyum seviyeleri hücre turgorunu ve gücünü kontrol eder ve böylece bitki hücreleri su kaybına ve buna bağlı olarak güneş yanıklarına dayanıklı hale gelir(Resim 2)
+
+Resim 2. Güneş Yanıklığı
+
+2. Su ve Toprak
+
+2.1 Su
+
+Uygun sulama metodu (Resim 3) yüksek verim ve kalitenin elde edilmesinde temel özellik taşır. Domates açık arazide 6.000 m3/ha ve sera koşullarında 10.000 m3/ha suya ihtiyaç duyar.
+
+Düşük miktarlarda besin maddesi içeren günlük sulamaların yapılması kök bölgesinde tuz stresinin oluşmasını ve erken dönemde meydana gelebilecek besin maddesi eksikliklerini özellikle haftalık gübreleme programlarının uygulandığı durumlarda ortadan kaldırır.
+
+Kuraklık (Resim 4) genel gelişimde gerilemelere yol açar ve özellikle kalsiyum alımını azaltarak kalsiyum noksanlığı ile ortaya çıkan Çiçek Ucu Çürüklüğünü (BER) beraberinde getirir ve direkt olarak meyveye zarar verir (Resim 5). Çiçeklenme olumsuz yönde etkilenir ve salkım dökümleri meydana gelir. Diğer yandan aşırı sulama anaerobik toprak koşullarında kök çürüklüklerine, çiçeklenmede gecikmeye ve meyvede bozukluklara neden olur (Resim 6).
+
+Resim 3. Sulama Sistemi
+
+Resim 4. Kuraklık Stresi
+
+Resim 5. Çiçek Ucu Çürüklüğü
+
+Resim 6. Yarılma
+
+Yüksek pH ya sahip sulama suyu yüksek dozlarda kalsiyum ve magnezyum karbonat ve bikarbonatları ihtiva eder. Bu tip sulama suyu koşullarında pH derecesini 5-6 seviyesine çekerek bitkinin su alımını sağlamak amacıyla asidifikasyon uygulamaları yapılması önerilmektedir. Bu uygulama P, Fe, Zn, Cu, Mn ve B gibi besin maddelerinin etkinliğini arttırarak damlama sulama sistemlerinde olası çözünmeyen tuzların birikimine engel olur.Asitdifikasyon (H+) karbonat (CO32-) ve bikarbonatların (HCO3-) karasız bir bileşik olan karbonik aside ve bu formdaki karasız bileşiğinde su ve karbondioksite dönüşmesine neden olur.1 HCO3- + 1 H+ _ 1 H2CO3 _ 1 H2O + 1 CO21 CO32- + 2 H+ _ 1 H2CO3 _ 1 H2O + 1 CO2(Bi)Karbonat + asit –>Karbonik asit –> su + karbondioksitSu içerisindeki bikarbonatların % 90-95 civarında asidifikasyonla nötrleştirilmesi önerilir. Böylelikle su düşük pH kapasitesini koruyarak olası pH düşüşleri engellenmiş olur. Sulama suyundaki asitlik derecesindeki yüksek pH toprakta var olan yüksek toksisitedeki alüminyum(Al3+) gibi elementlerin çözünmesine neden olarak istenmeyen durumlar ortaya çıkarabilir.
+
+2.2 Toprak
+
+Drenaj kapasitesi ve fizyolojik yapısı iyi olan toprak en ideal topraktır. Kökler 60 cm ye kadar gelişim göstermekle birlikte ilk 20 cm derinlikte kök hacminin % 70 olduğu görülmektedir.İdeal toprak pH sı 6,0-6,5 arasında olmalıdır (Şekil 14). pH > 6,5 olduğu durumlarda metalik mikro besin maddeleri (Fe, Zn, Mn, Cu), bor (B) ve fosforun (P); pH < 5,5 olduğu koşullarda ise fosfor (P) ve molibdenin bitkiye alım etkinliği azalır.
+
+Şekil 1. Toprak pH nın besin maddelerinin aktivitesine etkisiSerada alternatif yetiştirme ortamları: kayayünü (Resim 7), perlit (Resim 8) ve Coco peat (Resim 9).
+
+Resim 7. Kayayünü ortamında serada domates bitkisi
+
+Resim 8. Perlit ortamında serada domates bitkisi
+
+Resim 9. Coco peat torbaların serada domates bitkisi
+
+3. Organik Madde ve Gübre
+
+Organik madde ve gübre toprak yapısını ve mikrobiyolojik aktiviteyi kuvvetlendirmek ve toprağın su tutma kapasitesini arttırmak amacıyla uygulanır. Gübreleme yapılırken, kök bölgesinde (tuzluluk riski) besin maddelerinin alınım riski ve önemli besin maddeleri arasındaki dengesizlik riskinin artması nedeniyle gübrenin önemli miktarda besin maddesi içermesine dikkat edilmelidir. 10-50 MT gübre/ha uygulaması önemli ölçüde besin maddesi ihtiyacını karşılayacaktır. Yanmış tavuk gübresi (Dry chicken manure) (Tablo 1) is yanmış ahır gübresine oranla daha kuvvetlidir (Tablo 2). 10 MT tavuk gübresi ile hektar alana 134 kg azot uygulanmış olur. Oysa 50 MT ahır gübresinde hektar alana toplam 275 kg azot verilmiş olmaktadır.Tablo 1. Tavuk Gübresi Ortalama Besin Maddesi İçeriği
+
+Kaynak: Handboek Meststoffen NMI, 1995.Tablo 2. Ahır Gübresi Ortalama Besin Maddesi İçeriği.
+
+Kaynak: Handboek Meststoffen NMI, 1995.Gelişme dönemi boyunca toprakta organik olarak bağlı olan azot mikrobiyolojik aktiviteler sonucunda serbest kalır. Domatesin generatif faza geçtiği dönemde toprak içerisinde serbest hale gelen fazla azot, düzensiz olgunlaşmaya, çiçeklenmede azlığa ve raf ömrünün kısalmasına neden olabilir.Bu durumun pratikte çiftçi için temel problemlerden biri olması nedeniyle gübrenin azot içeriğinin %25 ile sınırlandırılması ve artakalanın özel bitki besin maddeleriyle birlikte verilmesi önerilir.
+
+4. Tuzluluk
+
+Ürünün verim potansiyelini engelleyen tuzluluk, tüm tuzların kök bölgesinde belli derecelerde birikmesi olarak tanımlanmaktadır. Tuzluluk yanlış gübre uygulamaları, yeterli yağışın olmaması ve/veya elektriksel kondüktivitesi yüksek sulama suyunun kullanılmasıyla ortaya çıkabilir (Resim 10).Tuzluluk koşullarında olası elektriksel kondüktivitenin artışına engel olmak için klor ve sülfatlı (KCl, amonyum sülfat ve potasyum sülfat) gübre veya organik madde kullanımı önerilmemektedir. Tuzluluğu önlemek ya da azaltmak için aşağıdaki yöntemlerde kullanılabilir: Toprak drenajını arttırmak, taban gübrelemesinden granüller gübre kullanmamak iyi ve kötü kalitedeki suyu birbiriyle karıştırmak, tuza dayanıklı çeşit seçilmesi, tek sıra dikimde iki sıralı damla sulama sisteminin kullanılması, plastik malç uygulamaları.
+
+Resim 10. Tuzlu gübrenin toprak yüzeyinde birikmesiDomates nispeten tuzluluğa karşı toleranslıdır (Tablo 3). Verim potansiyelinin düşüşünü engellemek için doymuş toprak çözeltisindeki elektriksel kondüktivitenin ECse < 2,5 mS/cm ve sulama suyu elektriksel kondüktivitesi < 1,7 mS/cm olmalıdır. Örneğin; toprak çözeltisinin elektriksel kondüktivitesinin 3,5 mS/cm olduğu koşullarda verim potansiyeli 10%. Ancak, bazı durumlarda tadı (cherry domates) ve raf ömrünü uzatmak amacıyla EC nin yüksek olması istenir.Tablo 3. Tuzluluk nedeniyle azalan verim potansiyeli.
+
+Hazırlayan;Doktor Tarsa Tarım San. ve Ticaret A.Ş.Pazar Geliştirme Departmanı
+
+Kaynak: Libro Azul, 2002.

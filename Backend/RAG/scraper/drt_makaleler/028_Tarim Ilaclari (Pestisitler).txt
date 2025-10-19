@@ -1,0 +1,70 @@
+Başlık: Tarım İlaçları (Pestisitler)
+==================================================
+
+Bazı çiftçilerimiz gübre ile tarım ilaçlarını karıştırıyor ve gübre yerine ilaç diyebiliyor. Birbirinden çok farklı şeyler olmalarına rağmen tarım ilaçları ile gübreler aynı ya da benzer şeylermiş gibi algılanabiliyor. Her ikisinin de yanlış kullanımı bazı zararlar meydana getirmekle beraber, gübrelerin yanlış kullanım zararları tarım ilaçlarının zararlı etkileri yanında oldukça sönük kalmaktadır.Dünya nüfusunun artması ve tarım alanlarının azalmasıyla artan dünya besin ihtiyacını karşılayabilmek ve birim alandan daha fazla ürün alabilmek için tarımsal üretimde nasıl bitki besin maddesi içeren gübreleri kullanmamız gerekiyorsa tarım ilaçlarının kullanımı da gerekmektedir.Tarımsal üretim sırasında verimin düşmesine, ürün kaybına neden olan hastalıklar, zararlı böcekler ve yabani otlar ile mücadele etmek için kullanılan kimyasalların genel adı tarım ilaçları(pestisit) olarak adlandırılır.Tarım ilaçları hem kimyasal yapılarına bağlı olarak hem de etki alanlarına göre değişik gruplar altına alınmıştır. Günümüzde etkin maddesine göre pestisit el kitabına giren 500 den fazla pestisit bunların değişik formulasyonları ile oluşturulmuş 2000?den fazla ticari isimde tarım ilacı mevcuttur.Tarım ilaçlarının toksik etkileri kimyasal yapılarına göre farklılık göstermektedir. Toksik etkileri denek hayvanlar üzerinde denemeler yapılarak bulunan pestisitlerin toksititeleri lethal dose(öldürücü doz) diye bilinen LD50 değeri ile ifade edilir. LD 50 deney hayvanlarında tek doz uygulamasında %50 sini öldüren doz miktarıdır. LD50 değeri ne kadar küçük olursa zehirlilik oranı o kadar artar. Tarım ilaçları bu değerlere göre de çok zehirli, zehirli, zehirsiz gibi sınıflara ayrılırlar.Tarım ilaçları zararlılara karşı farklı etki şekilleri göstermektedir.
+
+Mide Zehiri
+
+Değme (Temas) Zehiri
+
+Solunum (Teneffüs) Zehiri
+
+Sinir zehiri gibi.
+
+Bitki yapısında farklı şekillerde tutunmalarına göre de sınıflanmaktadırlar.
+
+Sistemikler
+
+Yarı Sistemikler
+
+Sistemik Olmayanlar gibi.
+
+Sistemik etkili İlaçlar bitki bünyesi içerisinde hareket ederek meyveye, yaprağa ve bitki köküne ulaşabilirler. Bu özellikleri sistemik ilaçların kullanımında daha dikkatli olmayı gerektirir.Tarım ilaçlarının insan sağlığına olan etki ve etki şekillerini aşağıdaki gibi sıralayabiliriz:
+
+Akut Zehirlenme: İlacın bir alımıyla ani olarak ortaya çıkan zehirlenmedir. İlaçlı ürünü yiyenlerde, fazla yoğun ortamda solunum yoluyla ya da cilde teması ile maruz kalmalarda ortaya çıkar. Bu ilaçların üretiminde ve uygulamasında çalışanların gerekli önlemleri almamaları durumunda ortaya çıkabilir. Bulantı ve kusma en sık görülen belirtilerdir.
+
+Kronik Zehirlenme: İlacın tekrarlanan alımlar neticesinde vücutta birikmesiyle oluşan zehirlenmelerdir. Etki ve belirtileri uzun vadede ortaya çıkmaktadır.
+
+Allerjik Etki: Daha çok hassas insanlarda ve genellikle ilaç uygulaması yapan veya ilacın bulunduğu ortamda çalışan işçilerde görülür. Gözlerde kanama, ciltte kızarma veya kasıntı olusabilir.
+
+Kanserojenik Etki: Daha çok İlacın kimyasal yapısının kanserojenik özellik tasımasıyla çok ortaya çıkar.
+
+Tarım ilaçlarının kullanımında yapılan başlıca hatalar:
+
+Ülkemizde en çok yapılan hataların başında geniş spektrumlu ilaçların kullanılması gelmektedir. Oysaki ilaç kullanımından önce hastalık ya da zararlı öncelikle tespit edilmeli sonrasında spesifik olan ilaçların kullanılması tercih edilmelidir. Aksi takdirde zararlı böcekler kontrol altında tutulmak istenir iken faydalı böceklerin ölümüne neden olunmaktadır.
+
+Aynı tür zararlılara sürekli aynı etken maddeli ilaçların kullanımı ile hedef zararlıların sonraki nesillerinde o etken maddeye direnç kazanmasıyla, etkinliğinin azalması ve bu durumda daha da fazla ilaç kullanılması yoluna gidilmesidir.
+
+Ürünlerin ambalajında bulunan kullanım kurallarına uyulmaması,
+
+İlacın ruhsatlı olmadığı üründe kullanılması,
+
+Bekleme süresi dolmadan ürünün hasat edilmesidir.
+
+Bunlara dayalı olarak bilinçsizce ve gereğinden fazla ilaç kullanımının yaratacağı olumsuzluklar şöyle sıralanabilir:
+
+Balıkların ve arıların ölümüne neden olabilir.
+
+Su kaynaklarına, göllere ve nehirlere karışarak kirliliğe neden olur.
+
+Yağmur veya sulama sularıyla toprak altına geçerek yer altı su kaynaklarını kirletebilir.
+
+Hedef olmayan çevre canlılarının alımıyla, besin zinciri yoluyla insanlara kadar bulaşabilir. Nitekim yapılan araştırmalar anne sütünde bile ilaç kalıntılarına rastlandığını göstermektedir.
+
+Günümüzde tarım ilaçlarının kullanımı tüm dünyada sıkı denetim ve kontrol altında yapılmaktadır. Ülkemizde de bu konuda önemli adımlar atılmakta, bu konuda alınması gereken önlemler ile ilgili tarım teşkilatları kullanıcıyı bilinçlendirmeye yönelik çalışmalar yapmaktadır.Fakat ne yazık ki, birçok ülkede zehirli ve yarılanma ömürleri yüksek olduğu için yasaklanan ilaçların bir kısmı halen ülkemizde kullanılmaktadır.
+
+Tarım İlaçlarının kullanımında alınması gereken önlemler:
+
+Tarım ilaçlarının kullanımı sıkı bir şekilde resmi otoriteler tarafından kontrol edilmelidir.
+
+İlaçları kullanan çiftçilerimize bu konularda yaygın eğitim verilmelidir.
+
+Çiftçilerimizin ziraat mühendisi denetiminde üretim yapması sağlanmalıdır.
+
+Dünyada kullanılan alternatif mücadele yöntemleri vakit geçirilmeden ülkemizde de teşvik edilerek, uygulanması sağlanmalıdır.(İyi tarım uygulamaları, dayanıklı ve bölgelere göre uygun çeşitlerin kullanılması vb.)
+
+Hasat aralığına uyulmalı, kısa sürede hasat edilen ürünlerde bozunması hızlı olan tarım ilaçları tercih edilmelidir.
+
+Tüm gerekli önlemler alınarak, bilinçli kullanımları sağlandığında, tarım ilaçlarının da faydası görülebilecektir.
+
+Hazırlayan;Doktor Tarsa Tarım San. ve Ticaret A.Ş.Pazar Geliştirme DepartmanıFotoğraflarFernando WeberichVangelis Thomaidis

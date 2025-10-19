@@ -1,0 +1,54 @@
+Başlık: Toprak ve Bazı Kavramlar
+==================================================
+
+Çağımızın; Bilgi çağı olarak adlandırılması şüphesiz çok doğrudur. Günümüzde paylaşımının ve ulaşılabilirliğinin teknoloji sayesinde kolaylaşmasıyla beraber, bilgiyi üreten, yaygınlaştıran ve doğru kullanan toplumlar daha uygar ve daha zengin olmaktadır. Bilgi ancak, kullananların ortak dili üzerinden doğru paylaşılabilir ve yaygınlaştırılabilir.Bu konuda Ziraat mühendisleri, tekniker ve teknisyenleri olarak kendi aramızda bile bazı kavramları eksik veya yanlış kullanabiliyoruz. Toprak bünyesini ve yapısını doğru tanımamız yetiştiricilikte doğru bitki ve çeşit seçiminden, uygun sulama ve gübreleme programını belirlememize kadar bizi yönlendirecek önemli bir etmendir. Toprak, birçok bilimsel alanda olduğu gibi hala tamamen çözülememiş bir bilim olup, hepimizin bildiği gibi hakkında ciltler dolusu yazılabilir. Bu makalede mesleki bazı kavramları kısaca bir kez daha hatırlatmak, paylaşmak istedim.
+
+Toprağın Fiziksel Özelliklerinden;
+
+Bünye (Tekstür): Bir toprağı oluşturan kum, silt ve kil gibi farklı büyüklükteki ve yapıdaki parçacıkların toplam içindeki oranları hakkında fikir veren bir kavramdır. Bünye analizinde bu parçacıklar % cinsinden bulunur. 12 çeşit bünye sınıfı vardır. Kendi içinde alt guruplara ayrılmak kaydıyla, iki adedi kaba, yedi adedi orta, üç adedi de ince bünye olarak adlandırılır.
+
+Yapı (Strüktür): Toprağı oluşturan parçacıklar bir araya gelerek “ped” leri, bunlar “agregat” ları, bunlar bir araya gelerek yapı ünitelerini ve toprağın yapı adını oluştururlar. Kil-Silt ve kili atomlara benzetirsek, yapı ünitelerini de moleküllere benzetebiliriz.Bazı yapı türleri:YuvarlakTabakalıBlokPrizmatik
+
+Yuvarlak
+
+Tabakalı
+
+Blok
+
+Prizmatik
+
+Hiçbir düzenli yapıya sahip olmayan topraklara yapısız topraklar deriz ve başlıca iki başlıkta incelenir.
+
+Teksel (serbest zerreler halinde)
+
+Massiv (şekilsiz, heterojen bloklar halinde)
+
+Bir toprağın yapısının oluşumunda;
+
+Kil mineralleri,
+
+Fe, Al ve Mn oksitleri,
+
+Organik kolloidler,
+
+Organik canlı salgıları,
+
+Mikro organizma artıkları,
+
+Islanma- Kuruma,
+
+Donma-Çözülme,
+
+Toprak işleme ve başka basınç kaynakları rol oynar.
+
+Organik Toprak
+
+İnce bünyeli topraklarda ağırlık üzerinden %30 ve üzerinde,
+
+Kaba bünyeli topraklarda ağırlık üzerinden %20 ve üzerinde organik madde içeren ve derinliği 30 cm ve daha fazla olan topraklara organik topraklar denir. Bu tip topraklarda toprağın temel özelliklerini mineral fraksiyonu değil, organik fraksiyon belirler.
+
+Verimlilik ÜretkenlikBirbiri ile sıkıca karıştırılan bu iki kavramın tanımları şöyledir.Üretkenlik: Bir toprağın, genel olarak bitki yetiştiriciliği İÇİN üretime engel bir özelliğinin olmamasıdır.Verimlilik: Bir toprağın belli bir ürün üzerinden üretkenlik potansiyelinin ifadesidir.Bir başka deyişle; Üretkenlik kavramını kullanırken belli bir bitki türü öznemiz olmalıdır.Verimli toprak aynı zamanda üretkendir. Fakat her üretken toprak her ürün için verimli değildir.Katyon Değişim Kapasitesi:Bir toprağın organik madde ve kil içeriğine bağlı olarak, rizosferdeki diffüz tabakada ne kadar katyonu tutup, ne kadar anyonla yer değiştirme gücünün ifadesidir.Toprağın katyon değişim kapasitesi, katyonların ise değiştirme gücünden söz edilir.Katyon Değişim Kapasitesi = ( % organik madde x 2,5 ) + ( % kil x 0,5 ) şeklinde matematiksel olarak ifade edilebilir.
+
+Organik maddenin KDK’sı: 200 me / 100 grMontmorillonit kil mineralinin KDK’sı: 100 me / 100 grİllit kil mineralinin KDK’sı: 30 me / 100 grKaolinit kil mineralinin KDK’sı: 8 me / 100 gr ‘dır.Katyonların değiştirme gücü (sırasıyla soldan sağa azalır)Ba > Sr > Ca > Mg > Cs > Rb > K > Na > LiBir toprakta bünye ne kadar ince ise, 2:1 tipi kil minerali ne kadar fazla ise, organik madde ne kadar fazla ise K.D.K. o kadar artar.Elektiriksel İletkenlik – Tuzluluk – AlkalilikElektriksel iletkenlik bildiğimiz gibi çeşitten bağımsız olarak toprak solüsyonundaki toplam çözünmüş maddenin ifadesidir. Çözünmüş madde miktarı arttıkça E.C. artar.Tuzlu topraklar: Cl2, SO4, ve NO3 tuzlarını içerir ve başat iyonlar Ca, Mg, Na’dur. Tuzlu toprakların ortak özelliği değişebilir Na’un %15’den fazla olması ve pH’nın 8,5’un üzerinde olmasıdır.
+
+Hazırlayan;Doktor Tarsa Tarım San. ve Ticaret A.Ş.Pazar Geliştirme DepartmanıFotoğraflarMike BergDan Shirley

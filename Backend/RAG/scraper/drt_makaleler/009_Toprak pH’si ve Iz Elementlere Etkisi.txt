@@ -1,0 +1,20 @@
+Başlık: Toprak pH’sı ve İz Elementlere Etkisi
+==================================================
+
+Toprak pH’sı toprağın alkali yâda asidik olduğunu görmemizi sağlayan bir nevi göstergedir. Toprak bünyesinde bulunan OH- iyonları ve H+ iyonlarının dengesine bağlı olarak toprak pH’sı değişim göstermektedir.
+
+Toprakta OH- iyonlarının fazla olması demek bu toprağın alkali olduğunu yani pH’sının yüksek olduğunu gösterir bir bilgidir. Aynı şekilde toprakta H+ iyonlarının fazla olması da bu toprağın asidik olduğunu yani pH’sının düşük olduğunu gösterir.
+
+Toprak pH’sı yükseldikçe ve azaldıkça bir takım elementlerin de bitki tarafından alımı azalmaktadır. Bunların başında da iz elementler gelmektedir. Bu etkileşimi aşağıdaki tablodan görebilirsiniz.
+
+Ülkemiz toprakları genel olarak yüksek pH’ya sahip oldukları için toprak pH’sı yükseldikçe daha çok iz elementlerin alımının azaldığını görüyoruz. Bunu da şu şekilde açıklayabiliriz. Toprak pH’sı yüksekse ortamda OH- iyonları fazla demektir. Bu da ortamda bulunan iz elementlerin hidroksil iyonlarına bağlanarak, metallerin hidroksitlerinin oluşmasına neden olmaktadır. Yani ortamda bulunan Fe elementi OH- ile birleşip Fe(OH)3 ve Fe(OH)2 oluşturmakta ve bu da bitki tarafından zor alınan bir elemente dönüşmektedir.
+
+Yandaki şekilde demir ile ilgili durum anlatılmıştır. Fakat bu durum, sadece demir için değil, aynı şekilde bakır (Cu), çinko (Zn), mangan (Mn) için de geçerlidir.Ayrıca iz elementlerin haricinde fosfor için de toprak pH’sı önemlidir. Toprak pH’sı yükseldikçe ortamdaki Ca ile birleşip CaPO4- oluştururlar. Bu bileşik bitkiler tarafından alımı zor bir bileşiktir. Bu yüzden pH yükseldikçe fosfor alımı azalır.
+
+Bitki kökleri toprağın katı kısmındaki besinleri değil toprak solüsyonu içindeki besinleri alırlar. Bu yüzden bizi ilgilendiren kısım toprak solüsyonu (sıvısı) içersindeki besin maddeleridir. Yukarıda oluşan bileşiklerin suda çözünmesi zor olduğu için bu söylediğimiz sıvı kısma geçemezler ve bitkiler bu besinlerden kısa sürede yararlanamazlar.Asitliği artırmada CO2 gazlarının da etkisi büyüktür. Makro ve mikro organizmalarca oluşturulan CO2 su ile birleştiğinde ( CO2 + H2O » H2CO3 ) karbonik asidi oluşturur. Karbonik asit H2CO3 » (HCO3-) + (H+) iyonlarına dönüştüğünden H+ iyonları konsantrasyonu artarak toprağın asitliğini artırmış olur.
+
+Yağışlı bölgelerde bazik katyonların yıkanma oranlarının yüksek olması, CO2 nin oluşturduğu karbonik asit, toprak pH’sını düşürüp asitliği artırmada etkili olmaktadır.Toprağa ilave olunan organik maddeler, doğrudan doğruya asit oluşturduklarından, toprağın değişim kapasitesini yükselttiklerinden ve bazla doygunluk derecesini azalttıklarından toprak pH’sını düşürürler.Ph’sı düşük topraklarda toprağın yapısını düzenlemek daha kolaydır. Belli oranlarda CaCO3 (kireç) ilave ederek toprak pH’sı artırılabilir. Fakat genelde topraklarımızın pH’sı yüksektir ve toprakların pH’sını düşürmek o kadar da kolay değildir. Bu yüzden yetiştiricilik yapılan toprağı çok iyi tanıyıp, analiz ettirip bir uygulama yapmalıyız. Analiz yaptırmadan toprağa kireç ilavesi yaparsak ve eğer pH zaten yüksekse daha da yükseltmiş oluruz ve toprağı daha da kötüleştirmiş oluruz.
+
+Yüksek pH’lı topraklarda eğer damlama sistemi ile çalışıyorsak toprak pH’sını düşürmek için yüksek miktarlarda kükürt atmak yerine; verdiğimiz gübre solüsyonunu asitleştirerek veya asit karakterli gübreler seçerek, kök bölgesine asidik gübre çözeltisi gönderip verdiğimiz besinlerin alımını sağlamak daha doğru olur. Ayrıca topraktan vereceğimiz iz elementleri de şelatlı olarak vermemiz bu iz elementlerin alımını daha da artıracaktır. Demir (Fe) için EDDHA şelatını diğer iz elementler için EDTA şelatını seçmemiz daha doğru olur.
+
+Hazırlayan;Doktor Tarsa Tarım San. ve Ticaret A.Ş.Pazar Geliştirme Departmanı
