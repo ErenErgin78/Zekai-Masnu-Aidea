@@ -95,8 +95,9 @@ coverage.xml
 *.py,cover
 .hypothesis/
 
-# Vector Veritabanı
+# Vector Veritabanı ve PDF dosyaları
+.pdf
+PDFs/
 .sqlite3
 vector_store/
-
 *.bil
