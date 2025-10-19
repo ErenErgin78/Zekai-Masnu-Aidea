@@ -22,13 +22,17 @@ class ImprovedMgmScraper:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Görselleri engelle, hızlanma için
+        chrome_options.add_argument("--disable-images")
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        
+        # Ek stabilite ayarları
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_argument("--disable-web-security")
         
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
-            self.driver.set_page_load_timeout(30)  # Sayfa yükleme timeout'u
-            self.wait = WebDriverWait(self.driver, 20)  # Daha uzun bekleme süresi
+            self.driver.set_page_load_timeout(30)  # Daha uzun timeout
+            self.wait = WebDriverWait(self.driver, 15)
         except Exception as e:
             print(f"Driver başlatılırken hata: {e}")
             raise
@@ -40,7 +44,7 @@ class ImprovedMgmScraper:
             self.driver.quit()
         except:
             pass
-        time.sleep(2)
+        time.sleep(3)  # Daha uzun bekleme
         self.setup_driver()
     
     def get_city_links(self):
@@ -52,7 +56,6 @@ class ImprovedMgmScraper:
             try:
                 self.driver.get(self.base_url)
                 
-                # Şehir linklerinin bulunduğu div'i bekle
                 city_div = self.wait.until(
                     EC.presence_of_element_located((By.CLASS_NAME, "kk_div1"))
                 )
@@ -62,7 +65,7 @@ class ImprovedMgmScraper:
                 
                 for link in links:
                     city_name = link.text.strip()
-                    if city_name:  # Boş olmayan şehir isimlerini al
+                    if city_name:
                         city_url = link.get_attribute("href")
                         if city_url and city_url.startswith("?"):
                             city_url = "https://www.mgm.gov.tr/veridegerlendirme/il-ve-ilceler-istatistik.aspx" + city_url
@@ -79,37 +82,54 @@ class ImprovedMgmScraper:
                     raise
     
     def scrape_city_data(self, city_name, city_url):
-        """Bir şehrin verilerini scrape et"""
+        """Bir şehrin verilerini scrape et - GELİŞTİRİLMİŞ"""
         max_retries = 2
         
         for attempt in range(max_retries):
             try:
                 print(f"{city_name} verileri alınıyor... (deneme {attempt + 1})")
                 
-                # Rastgele bekleme (anti-bot önlemi)
-                time.sleep(random.uniform(1, 3))
+                # Exponential backoff - her denemede daha fazla bekle
+                wait_time = random.uniform(2, 4) * (attempt + 1)
+                time.sleep(wait_time)
                 
+                # Sayfayı yükle
                 self.driver.get(city_url)
                 
-                # Tablonun yüklenmesini bekle
-                table = self.wait.until(
-                    EC.presence_of_element_located((By.TAG_NAME, "table"))
+                # Sayfanın tamamen yüklendiğini doğrula
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: d.execute_script('return document.readyState') == 'complete'
+                )
+                
+                # Tablonun yüklenmesini bekle - daha uzun timeout
+                try:
+                    table = WebDriverWait(self.driver, 40).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "table"))
+                    )
+                except TimeoutException:
+                    # Tablo yoksa, sayfada "veri yok" mesajı var mı kontrol et
+                    page_text = self.driver.page_source.lower()
+                    if "veri" in page_text or "yok" in page_text or len(self.driver.find_elements(By.TAG_NAME, "table")) == 0:
+                        print(f"⚠️ {city_name} için MGM'de veri bulunmuyor - ATLANACAK")
+                        return "NO_DATA"  # Özel işaret
+                    raise
+                
+                # Tablonun içeriğinin yüklendiğini doğrula
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: len(d.find_elements(By.TAG_NAME, "tr")) > 1
                 )
                 
                 # Verileri topla
                 city_data = {"Şehir": city_name}
                 
-                # Tablo satırlarını al
                 rows = table.find_elements(By.TAG_NAME, "tr")
                 
                 for row in rows:
-                    # Satır başlığını al
                     header_cells = row.find_elements(By.TAG_NAME, "th")
                     if len(header_cells) > 0:
                         parameter = header_cells[0].text.strip()
-                        if parameter and parameter != city_name:  # Şehir ismi başlığını atla
+                        if parameter and parameter != city_name:
                             
-                            # Veri hücrelerini al
                             data_cells = row.find_elements(By.TAG_NAME, "td")
                             
                             for i, cell in enumerate(data_cells):
@@ -123,14 +143,17 @@ class ImprovedMgmScraper:
                 return city_data
                 
             except TimeoutException:
-                print(f"{city_name} için zaman aşımı (deneme {attempt + 1})")
+                print(f"⏱️ {city_name} için zaman aşımı (deneme {attempt + 1})")
                 if attempt < max_retries - 1:
+                    # Driver'ı yeniden başlat ve tekrar dene
+                    self.restart_driver()
                     continue
                 else:
+                    print(f"⚠️ {city_name} için tüm denemeler başarısız")
                     return None
                     
             except WebDriverException as e:
-                print(f"{city_name} için WebDriver hatası (deneme {attempt + 1}): {e}")
+                print(f"🔧 {city_name} için WebDriver hatası (deneme {attempt + 1})")
                 if attempt < max_retries - 1:
                     self.restart_driver()
                     continue
@@ -138,7 +161,7 @@ class ImprovedMgmScraper:
                     return None
                     
             except Exception as e:
-                print(f"{city_name} için beklenmeyen hata (deneme {attempt + 1}): {e}")
+                print(f"❌ {city_name} için beklenmeyen hata (deneme {attempt + 1}): {e}")
                 if attempt < max_retries - 1:
                     continue
                 else:
@@ -155,43 +178,106 @@ class ImprovedMgmScraper:
         return months[index] if index < len(months) else None
     
     def scrape_all_cities(self):
-        """TÜM şehirleri scrape et"""
+        """TÜM şehirleri scrape et - BAŞARISIZLARI TEKRAR DENE"""
         city_links = self.get_city_links()
         all_data = []
+        failed_cities = []
+        no_data_cities = []  # Veri olmayan şehirler
         
         total_cities = len(city_links)
         successful = 0
-        failed = 0
         
         print(f"🚀 TÜM ŞEHİRLER İŞLENİYOR: {total_cities} şehir")
         
+        # İLK TUR
         for i, (city_name, city_url) in enumerate(city_links, 1):
             print(f"\n[{i}/{total_cities}] İşleniyor: {city_name}")
             
             city_data = self.scrape_city_data(city_name, city_url)
-            if city_data:
+            if city_data == "NO_DATA":
+                no_data_cities.append(city_name)
+                print(f"⚠️ {city_name} - VERİ YOK (normal)")
+            elif city_data:
                 all_data.append(city_data)
                 successful += 1
                 print(f"✅ {city_name} - BAŞARILI")
             else:
-                failed += 1
-                print(f"❌ {city_name} - BAŞARISIZ")
+                failed_cities.append((city_name, city_url))
+                print(f"❌ {city_name} - BAŞARISIZ (tekrar denenecek)")
             
             # Her 10 şehirden sonra driver'ı yeniden başlat
-            if i % 10 == 0:
+            if i % 10 == 0 and i < total_cities:
                 print(f"🔄 {i}. şehirden sonra driver yeniden başlatılıyor...")
                 self.restart_driver()
                 
             # İlerleme durumunu göster
             if i % 5 == 0:
                 progress = (i / total_cities) * 100
-                print(f"📊 İlerleme: {i}/{total_cities} ({progress:.1f}%) - Başarılı: {successful}, Başarısız: {failed}")
+                failed = len(failed_cities)
+                print(f"📊 İlerleme: {i}/{total_cities} ({progress:.1f}%) - Başarılı: {successful}, Başarısız: {failed}, Veri Yok: {len(no_data_cities)}")
         
-        print(f"\n🎉 TÜM ŞEHİRLER TAMAMLANDI!")
-        print(f"⏺️  Toplam: {total_cities} şehir")
+        # İKİNCİ TUR - BAŞARISIZ ŞEHİRLERİ TEKRAR DENE
+        if failed_cities:
+            print(f"\n{'='*60}")
+            print(f"🔄 İKİNCİ TUR: {len(failed_cities)} başarısız şehir tekrar deneniyor...")
+            print(f"{'='*60}\n")
+            
+            self.restart_driver()
+            time.sleep(5)
+            
+            retry_failed = []
+            for idx, (city_name, city_url) in enumerate(failed_cities, 1):
+                print(f"\n[Tekrar {idx}/{len(failed_cities)}] İşleniyor: {city_name}")
+                
+                city_data = self.scrape_city_data(city_name, city_url)
+                if city_data == "NO_DATA":
+                    no_data_cities.append(city_name)
+                    print(f"⚠️ {city_name} - VERİ YOK (ikinci denemede anlaşıldı)")
+                elif city_data:
+                    all_data.append(city_data)
+                    successful += 1
+                    print(f"✅ {city_name} - İKİNCİ DENEMEDE BAŞARILI!")
+                else:
+                    retry_failed.append((city_name, city_url))
+                    print(f"❌ {city_name} - YİNE BAŞARISIZ")
+                
+                # Başarısız şehirler arasında da driver'ı yenile
+                if idx % 5 == 0 and idx < len(failed_cities):
+                    self.restart_driver()
+                    time.sleep(3)
+            
+            failed_cities = retry_failed
+        
+        # SONUÇ RAPORU
+        print(f"\n{'='*60}")
+        print(f"🎉 TÜM ŞEHİRLER TAMAMLANDI!")
+        print(f"{'='*60}")
+        print(f"📊 Toplam: {total_cities} şehir")
         print(f"✅ Başarılı: {successful} şehir")
-        print(f"❌ Başarısız: {failed} şehir")
-        print(f"📈 Başarı Oranı: {(successful/total_cities)*100:.1f}%")
+        print(f"⚠️ Veri Yok: {len(no_data_cities)} şehir")
+        print(f"❌ Başarısız: {len(failed_cities)} şehir")
+        
+        actual_total = total_cities - len(no_data_cities)
+        if actual_total > 0:
+            print(f"📈 Başarı Oranı (veri olan şehirler): {(successful/actual_total)*100:.1f}%")
+        
+        if no_data_cities:
+            print(f"\n⚠️ Veri olmayan şehirler (MGM'de kayıt yok):")
+            for city_name in no_data_cities:
+                print(f"   - {city_name}")
+        
+        if failed_cities:
+            print(f"\n❌ Başarısız şehirler:")
+            for city_name, _ in failed_cities:
+                print(f"   - {city_name}")
+            
+            # Başarısız şehirleri dosyaya kaydet
+            pd.DataFrame(failed_cities, columns=['Şehir', 'URL']).to_csv(
+                'basarisiz_sehirler.csv', index=False, encoding='utf-8-sig'
+            )
+            print(f"\n💾 Başarısız şehirler 'basarisiz_sehirler.csv' dosyasına kaydedildi")
+        else:
+            print(f"\n🎊 VERİSİ OLAN TÜM ŞEHİRLER %100 BAŞARIYLA TAMAMLANDI!")
         
         return all_data
     
@@ -203,11 +289,9 @@ class ImprovedMgmScraper:
         
         df = pd.DataFrame(data)
         
-        # Sütunları düzenle
         columns = ["Şehir"] + [col for col in df.columns if col != "Şehir"]
         df = df[columns]
         
-        # CSV'ye kaydet
         df.to_csv(filename, index=False, encoding='utf-8-sig')
         print(f"✅ Veriler {filename} dosyasına kaydedildi")
         print(f"📊 Toplam {len(data)} şehrin verisi kaydedildi")
@@ -226,11 +310,9 @@ def main():
     scraper = ImprovedMgmScraper()
     
     try:
-        # TÜM ŞEHİRLERİ AL
         print("🚀 TÜM ŞEHİRLER ALINIYOR...")
         all_data = scraper.scrape_all_cities()
         
-        # CSV'ye kaydet
         if all_data:
             df = scraper.save_to_csv(all_data)
             print("\n📋 İlk 5 satır önizleme:")
