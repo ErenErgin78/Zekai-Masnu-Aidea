@@ -18,13 +18,4 @@ https://www.fao.org/soils-portal/data-hub/en/ (Toprakla alakalı bilgiler)
 
 https://www.rhs.org.uk/advice/advice-search
 
-Olmayabilir:
 
-Tarım Kütüphanesi (tarimkutuphanesi.com): Adından da anlaşılacağı gibi, tarımın birçok dalında geniş bir bilgi arşivi sunar. Toprak işleme, gübreleme ve farklı toprak tiplerine göre ürün seçimi gibi konularda detaylı yazılar bulabilirsiniz.
-Url: https://www.tarimkutuphanesi.com/ (eski 2007 tarihli)
-
-Ulusal Hububat Konseyi: Özellikle tahıl üretimi üzerine odaklansa da, toprak verimliliği ve sürdürülebilir tarım gibi konularda raporlar ve makaleler yayımlar.
-URL: https://www.uhk.org.tr/tr/raporlar/
-
-Ziraat Mühendisleri Odası (ZMO): Odanın web sitesinde ve yayınlarında tarım politikaları, toprak sağlığı ve üretim teknikleri hakkında profesyonel görüşler ve bilgilendirici yazılar yer alır.
-URL: https://www.zmo.org.tr/listele/raporlar (ZMO ve UHK daha çok durum raporları gibi duruyor işe yaramayabilir.)
