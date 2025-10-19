@@ -96,7 +96,7 @@ coverage.xml
 .hypothesis/
 
 # Vector Veritabanı ve PDF dosyaları
-.pdf
+*.pdf
 PDFs/
 .sqlite3
 vector_store/
