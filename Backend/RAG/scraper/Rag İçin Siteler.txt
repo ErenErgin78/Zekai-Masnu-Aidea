@@ -8,7 +8,7 @@ Toprak Bilimi ve Bitki Besleme Derneği: Akademik makalelerin, yayınların ve k
 Url: https://dergipark.org.tr/tr/pub/tbbbd
 
 Doktor Tarsa Blog: Tarım sektöründe faaliyet gösteren bir şirketin blogu olmasına rağmen, bitki besleme, toprak analizi ve verimliliği artırma gibi konularda çiftçilere yönelik çok faydalı ve pratik bilgiler sunmaktadır.
-URL: https://www.drt.com.tr/faydali-bilgiler/
+URL: https://www.drt.com.tr/faydali-bilgiler/ ++
 
 https://www.tarimorman.gov.tr/TAGEM/Menu/28/Yayinlar_veriler (Tarımla ilgili yayınlanan akademik çalışmalar)
 
