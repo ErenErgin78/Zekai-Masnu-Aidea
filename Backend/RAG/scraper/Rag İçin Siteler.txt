@@ -2,29 +2,16 @@ Olabilir:
 
 https://extension.umn.edu/manage-soil-nutrients/quick-guide-fertilizing-plants (tarımla ilgili güzel blog yazılarının yayınlandığı site)
 
-https://www.britannica.com/search?query=farming (tarımla alakalı yazılar içeren bir url)
-
 Toprak Bilimi ve Bitki Besleme Derneği: Akademik makalelerin, yayınların ve kongre duyurularının yer aldığı, daha çok bilimsel bir kaynaktır. Ancak yayınları arasında popüler bilim yazıları da bulunabilir. 
-Url: https://dergipark.org.tr/tr/pub/tbbbd
+Url: https://dergipark.org.tr/tr/pub/tbbbd ++ 
 
 Doktor Tarsa Blog: Tarım sektöründe faaliyet gösteren bir şirketin blogu olmasına rağmen, bitki besleme, toprak analizi ve verimliliği artırma gibi konularda çiftçilere yönelik çok faydalı ve pratik bilgiler sunmaktadır.
-URL: https://www.drt.com.tr/faydali-bilgiler/
+URL: https://www.drt.com.tr/faydali-bilgiler/ ++
 
-https://www.tarimorman.gov.tr/TAGEM/Menu/28/Yayinlar_veriler (Tarımla ilgili yayınlanan akademik çalışmalar)
+https://www.tarimorman.gov.tr/TAGEM/Menu/28/Yayinlar_veriler (Tarımla ilgili yayınlanan akademik çalışmalar) ++
 
 https://arastirma.tarimorman.gov.tr/toprakgubre/Menu/148/Arastirma-Yayinlari (Toprak verimliliği ve bitki besleme ile ilgili eser tavsiyeleri)
 
 https://www.fao.org/soils-portal/data-hub/en/ (Toprakla alakalı bilgiler)
 
-https://www.rhs.org.uk/advice/advice-search
-
-Olmayabilir:
-
-Tarım Kütüphanesi (tarimkutuphanesi.com): Adından da anlaşılacağı gibi, tarımın birçok dalında geniş bir bilgi arşivi sunar. Toprak işleme, gübreleme ve farklı toprak tiplerine göre ürün seçimi gibi konularda detaylı yazılar bulabilirsiniz.
-Url: https://www.tarimkutuphanesi.com/ (eski 2007 tarihli)
-
-Ulusal Hububat Konseyi: Özellikle tahıl üretimi üzerine odaklansa da, toprak verimliliği ve sürdürülebilir tarım gibi konularda raporlar ve makaleler yayımlar.
-URL: https://www.uhk.org.tr/tr/raporlar/
-
-Ziraat Mühendisleri Odası (ZMO): Odanın web sitesinde ve yayınlarında tarım politikaları, toprak sağlığı ve üretim teknikleri hakkında profesyonel görüşler ve bilgilendirici yazılar yer alır.
-URL: https://www.zmo.org.tr/listele/raporlar (ZMO ve UHK daha çok durum raporları gibi duruyor işe yaramayabilir.)
+https://www.rhs.org.uk/advice/advice-search ++
