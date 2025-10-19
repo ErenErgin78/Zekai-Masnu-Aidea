@@ -1,7 +1,0 @@
-,model,cv_score,test_accuracy,test_f1,test_precision,test_recall,best_params
-Logistic Regression,"LogisticRegression(C=0.1, max_iter=1000, multi_class='ovr', random_state=42,
-                   solver='liblinear')",0.09097443787875928,0.08723404255319149,0.07244337017365429,0.07421487019575822,0.08723404255319149,"{'C': 0.1, 'solver': 'liblinear'}"
-Random Forest,"RandomForestClassifier(min_samples_split=5, n_estimators=200, random_state=42)",0.10285387050287276,0.10638297872340426,0.10624860830047246,0.10634289081590285,0.10638297872340426,"{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 200}"
-Gradient Boosting,GradientBoostingClassifier(random_state=42),0.09150698207127439,0.10070921985815603,0.10041655382488614,0.10138011262053492,0.10070921985815603,"{'learning_rate': 0.1, 'max_depth': 3, 'n_estimators': 100}"
-SVM,"SVC(C=1, probability=True, random_state=42)",0.09239382154341849,0.09574468085106383,0.08953710325755702,0.09831471829160478,0.09574468085106383,"{'C': 1, 'kernel': 'rbf'}"
-K-Nearest Neighbors,KNeighborsClassifier(weights='distance'),0.09576104262241437,0.10070921985815603,0.10054251077914524,0.10078421687352829,0.10070921985815603,"{'n_neighbors': 5, 'weights': 'distance'}"
