@@ -95,8 +95,10 @@ coverage.xml
 *.py,cover
 .hypothesis/
 
-# Vector Veritabanı
+# Vector Veritabanı ve PDF dosyaları
+drt_makaleler/
+Tarım Ve Orman Bakanlığı/
+dergipark_pdfs/
 .sqlite3
 vector_store/
-
 *.bil
