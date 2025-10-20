@@ -30,8 +30,7 @@ import geopandas as gpd
 from shapely.geometry import Point
 from geopy.geocoders import Nominatim
 from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 import logging
 from datetime import datetime
@@ -44,22 +43,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # FastAPI uygulaması oluştur
-app = FastAPI(
-    title="Soil Analysis API",
-    description="HWSD2 veritabanı kullanarak toprak analizi yapan API",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+router = APIRouter(prefix="/soiltype", tags=["Soil Analysis"])
 
-# CORS middleware ekle
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Production'da spesifik domainler belirtilmeli
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Pydantic modelleri
 class ManualRequest(BaseModel):
@@ -1052,7 +1037,7 @@ except Exception as e:
     logger.error(f"Failed to initialize Soil Analysis Service: {str(e)}")
     soil_service = None
 
-@app.get("/", response_model=Dict[str, str])
+@router.get("/", response_model=Dict[str, str])
 async def root():
     """API ana endpoint'i"""
     return {
@@ -1062,7 +1047,7 @@ async def root():
         "docs": "/docs"
     }
 
-@app.get("/health", response_model=Dict[str, str])
+@router.get("/health", response_model=Dict[str, str])
 async def health_check():
     """Sağlık kontrolü endpoint'i"""
     if soil_service is None:
@@ -1077,7 +1062,7 @@ async def health_check():
         "service": "Soil Analysis API"
     }
 
-@app.post("/analyze", response_model=SoilAnalysisResponse)
+@router.post("/analyze", response_model=SoilAnalysisResponse)
 async def analyze_soil(request: ManualRequest):
     """
     Manuel koordinat ile toprak analizi
@@ -1109,7 +1094,7 @@ async def analyze_soil(request: ManualRequest):
             detail=f"Analysis failed: {str(e)}"
         )
 
-@app.post("/analyze/auto", response_model=SoilAnalysisResponse)
+@router.post("/analyze/auto", response_model=SoilAnalysisResponse)
 async def analyze_soil_auto(request: AutoRequest):
     """
     Otomatik konum tespiti ile toprak analizi
@@ -1152,6 +1137,9 @@ async def analyze_soil_auto(request: AutoRequest):
             detail=f"Automatic analysis failed: {str(e)}"
         )
 
+<<<<<<< HEAD
+
+=======
 @app.get("/points/turkey", response_model=TurkeyPointsResponse)
 async def generate_turkey_points(
     mode: str = "grid",
@@ -1236,6 +1224,7 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Internal server error"
     )
+>>>>>>> 9bbf884a04f3b95132bc25056f9924de7633df86
 
 if __name__ == "__main__":
     import uvicorn
