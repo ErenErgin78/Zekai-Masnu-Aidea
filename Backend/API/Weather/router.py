@@ -10,6 +10,7 @@ import logging
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
 
+
 # Logging konfigürasyonu
 logging.basicConfig(
     level=logging.INFO,
@@ -54,6 +55,38 @@ class AutoRequest(BaseModel):
         if v.lower() != 'auto':
             raise ValueError('Method must be "Auto" for automatic location detection')
         return v.title()
+    
+#API'de kullanılan WMO kodlarının Türkçe açıklamaları
+WMO_CODES_TR = {
+    0: "Açık",
+    1: "Az Bulutlu",
+    2: "Parçalı Bulutlu",
+    3: "Çok Bulutlu (Kapalı)",
+    45: "Sisli",
+    48: "Kırağı Sisi",
+    51: "Çiseleme (Hafif)",
+    53: "Çiseleme (Orta)",
+    55: "Çiseleme (Yoğun)",
+    56: "Donan Çiseleme (Hafif)",
+    57: "Donan Çiseleme (Yoğun)",
+    61: "Yağmur (Hafif)",
+    63: "Yağmur (Orta)",
+    65: "Yağmur (Şiddetli)",
+    66: "Donan Yağmur (Hafif)",
+    67: "Donan Yağmur (Şiddetli)",
+    71: "Kar Yağışı (Hafif)",
+    73: "Kar Yağışı (Orta)",
+    75: "Kar Yağışı (Şiddetli)",
+    77: "Kar Taneleri",
+    80: "Sağanak Yağmur (Hafif)",
+    81: "Sağanak Yağmur (Orta)",
+    82: "Sağanak Yağmur (Şiddetli)",
+    85: "Sağanak Kar (Hafif)",
+    86: "Sağanak Kar (Şiddetli)",
+    95: "Gök Gürültülü Fırtına",
+    96: "Gök Gürültülü Fırtına (Hafif Dolu)",
+    99: "Gök Gürültülü Fırtına (Şiddetli Dolu)"
+}
     
 
 def get_automatic_coordinates() -> tuple[Optional[float], Optional[float]]:
@@ -110,6 +143,7 @@ def get_daily_Data(latitude, longitude):
             wind_speed_data = data.get("daily").get("wind_speed_10m_max", [])
             wind_gusts_data = data.get("daily").get("wind_gusts_10m_max", [])
             weather_code_data = data.get("daily").get("weather_code", [])
+            weather_code_data = WMO_CODES_TR.get(weather_code_data[0], "Bilinmeyen")
             return {
                 "precipitation_sum": rainfall_data[0],
                 "time": day_data[0],
@@ -117,7 +151,7 @@ def get_daily_Data(latitude, longitude):
                 "wind_direction_10m_dominant": wind_direction_data[0],
                 "wind_speed_10m_max": wind_speed_data[0],
                 "wind_gusts_10m_max": wind_gusts_data[0],
-                "weather_code": weather_code_data[0]
+                "weather_code": weather_code_data
             }
 
             
