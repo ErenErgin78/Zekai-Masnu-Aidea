@@ -9,13 +9,31 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import os
 
+# ---------- 📁 Dinamik Dosya Yolu Ayarları ----------
+# Proje ana dizinini al (MACHINELEARNING klasörü)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Data klasörü yolu
+DATA_DIR = os.path.join(BASE_DIR, "Data")
+
+# Dosya yolları
+FILE_PATH = os.path.join(DATA_DIR, "Crop_recommendation.csv")
+CLEAN_PATH = os.path.join(DATA_DIR, "Crop_recommendation_cleaned.csv")
+
+print(f"📂 Data klasörü: {DATA_DIR}")
+print(f"📄 Okunacak dosya: {FILE_PATH}")
+print(f"💾 Kaydedilecek dosya: {CLEAN_PATH}")
+
 # ---------- 1️⃣ Veri Yükleme ----------
-FILE_PATH = r"C:\Users\ATIF\Downloads\Crop_recommendation.csv"
+try:
+    # 🔹 Noktalı virgülle ayrılmış dosya
+    df = pd.read_csv(FILE_PATH, sep=';')
+    print("✅ Veri yüklendi:", df.shape)
+except FileNotFoundError:
+    print(f"❌ HATA: Dosya bulunamadı!\n📍 Beklenen konum: {FILE_PATH}")
+    print("💡 Lütfen CSV dosyasını Data/ klasörüne koyun.")
+    exit()
 
-# 🔹 Noktalı virgülle ayrılmış dosya
-df = pd.read_csv(FILE_PATH, sep=';')
-
-print("✅ Veri yüklendi:", df.shape)
 print("🧾 Sütunlar:", df.columns.tolist())
 
 # ---------- 2️⃣ Sütun İsimlerini Standartlaştır ----------
@@ -50,9 +68,6 @@ for col in numeric_cols:
     outliers = (z_scores > 3).sum()
     print(f"{col}: {outliers} potansiyel aykırı değer")
 
-# (İstersen outlier temizliği yapabilirsin ama biz bu projede koruduk)
-# df = df[(np.abs(stats.zscore(df[numeric_cols])) < 3).all(axis=1)]
-
 # ---------- 6️⃣ Hedef Değişken Kontrolü ----------
 if 'label' not in df.columns:
     raise KeyError("❌ 'label' sütunu bulunamadı! Sütun adlarını kontrol et.")
@@ -66,13 +81,14 @@ df['label'] = df['label'].astype('category')
 # ---------- 8️⃣ Korelasyon Analizi ----------
 corr = df[numeric_cols].corr()
 plt.figure(figsize=(8,6))
-sns.heatmap(corr, annot=True, cmap="YlGnBu")
+sns.heatmap(corr, annot=True, cmap="YlGnBu", fmt=".2f")
 plt.title("📈 Korelasyon Matrisi — Sayısal Özellikler")
+plt.tight_layout()
 plt.show()
 
 # ---------- 9️⃣ Temiz Veriyi Kaydet ----------
-CLEAN_PATH = r"C:\Users\ATIF\Downloads\Crop_recommendation_cleaned.csv"
 df.to_csv(CLEAN_PATH, index=False, encoding="utf-8-sig")
 
 print(f"\n💾 Temiz veri kaydedildi: {CLEAN_PATH}")
 print(f"📏 Yeni boyut: {df.shape}")
+print("\n✅ Veri temizleme işlemi tamamlandı!")
