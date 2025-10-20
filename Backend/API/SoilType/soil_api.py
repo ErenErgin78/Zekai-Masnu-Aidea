@@ -1137,9 +1137,6 @@ async def analyze_soil_auto(request: AutoRequest):
             detail=f"Automatic analysis failed: {str(e)}"
         )
 
-<<<<<<< HEAD
-
-=======
 @app.get("/points/turkey", response_model=TurkeyPointsResponse)
 async def generate_turkey_points(
     mode: str = "grid",
@@ -1224,7 +1221,6 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Internal server error"
     )
->>>>>>> 9bbf884a04f3b95132bc25056f9924de7633df86
 
 if __name__ == "__main__":
     import uvicorn
