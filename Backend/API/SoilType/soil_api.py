@@ -1137,10 +1137,8 @@ async def analyze_soil_auto(request: AutoRequest):
             detail=f"Automatic analysis failed: {str(e)}"
         )
 
-<<<<<<< HEAD
 
-=======
-@app.get("/points/turkey", response_model=TurkeyPointsResponse)
+@router.get("/points/turkey", response_model=TurkeyPointsResponse)
 async def generate_turkey_points(
     mode: str = "grid",
     lon_step: float = 0.5,
@@ -1183,7 +1181,7 @@ async def generate_turkey_points(
             detail=f"Points generation failed: {str(e)}"
         )
 
-@app.post("/analyze/csv", response_model=SoilAnalysisCSVResponse)
+@router.post("/analyze/csv", response_model=SoilAnalysisCSVResponse)
 async def analyze_coordinates_from_csv_endpoint(csv_file_path: str):
     """
     CSV dosyasındaki koordinatlar için toplu toprak analizi
@@ -1215,16 +1213,6 @@ async def analyze_coordinates_from_csv_endpoint(csv_file_path: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"CSV soil analysis failed: {str(e)}"
         )
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    """Global exception handler"""
-    logger.error(f"Unhandled exception: {str(exc)}")
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Internal server error"
-    )
->>>>>>> 9bbf884a04f3b95132bc25056f9924de7633df86
 
 if __name__ == "__main__":
     import uvicorn

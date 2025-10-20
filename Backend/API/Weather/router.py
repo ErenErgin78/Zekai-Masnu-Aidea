@@ -2,11 +2,86 @@
 
 import requests
 from fastapi import APIRouter
-
+from pydantic import BaseModel, Field, field_validator
+import re
+from typing import Optional
+import geocoder
+import logging
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
 
+# Logging konfigürasyonu
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
+# Pydantic modelleri
+class ManualRequest(BaseModel):
+    """Manuel koordinat girişi için model"""
+    method: str = Field(..., description="Method type", example="Manual")
+    longitude: float = Field(..., ge=-180, le=180, description="Boylam (-180 ile 180 arası)")
+    latitude: float = Field(..., ge=-90, le=90, description="Enlem (-90 ile 90 arası)")
+    
+    @field_validator('method')
+    @classmethod
+    def validate_method(cls, v):
+        if v.lower() != 'manual':
+            raise ValueError('Method must be "Manual" for manual coordinates')
+        return v.title()
+    
+    @field_validator('longitude', 'latitude')
+    @classmethod
+    def validate_coordinates(cls, v):
+        """Koordinat değerlerini doğrula ve güvenlik kontrolü yap"""
+        if not isinstance(v, (int, float)):
+            raise ValueError('Coordinates must be numeric')
+        
+        # SQL injection koruması - sadece sayısal değerlere izin ver
+        if re.search(r'[^0-9.\-]', str(v)):
+            raise ValueError('Invalid coordinate format - only numbers, dots and minus allowed')
+        
+        return float(v)
+
+class AutoRequest(BaseModel):
+    """Otomatik konum tespiti için model"""
+    method: str = Field(..., description="Method type", example="Auto")
+    
+    @field_validator('method')
+    @classmethod
+    def validate_method(cls, v):
+        if v.lower() != 'auto':
+            raise ValueError('Method must be "Auto" for automatic location detection')
+        return v.title()
+    
+
+def get_automatic_coordinates() -> tuple[Optional[float], Optional[float]]:
+    """
+    IP adresinden otomatik konum tespiti
+    
+    Returns:
+        (longitude, latitude) tuple veya (None, None)
+        
+    Raises:
+        Exception: Konum tespit hatası
+    """
+    try:
+        logger.info("Attempting automatic location detection...")
+        g = geocoder.ip('me')
+        
+        if g.ok:
+            lat, lon = g.latlng
+            logger.info(f"Location detected: Lat={lat}, Lon={lon}")
+            return lon, lat
+        else:
+            logger.warning("Automatic location detection failed")
+            return None, None
+            
+    except Exception as e:
+        logger.error(f"Error in automatic location detection: {str(e)}")
+        raise Exception(f"Location detection error: {str(e)}")
+        
 
 # Günlük hava durumu verilerini al
 def get_daily_Data(latitude, longitude):
@@ -78,18 +153,67 @@ def get_daily_et0(latitude, longitude):
         return None
 
 
-# Günlük hava durumu endpoint'i
-@router.get("/dailyweather/{latitude}/{longitude}")
-async def daily_weather(latitude: float, longitude: float):
-    data = get_daily_Data(latitude, longitude)
-    if data:
-        return data
-    return {"error": "Hava durumu verisi alınamadı"}
 
-# Günlük et0(su kaybı hesaplamak için) endpoint'i
-@router.get("/dailyet0/{latitude}/{longitude}")
-async def daily_et0(latitude: float, longitude: float):
-    data = get_daily_et0(latitude, longitude)
-    if data:
-        return data
-    return {"error": "ET0 verisi alınamadı"}
+@router.post("/dailyweather/auto")
+async def daily_weather_auto(request: AutoRequest):
+    """Otomatik konum tespiti ile günlük hava durumu"""
+    try:
+        lon, lat = get_automatic_coordinates()
+        if lon is None or lat is None:
+            return {"error": "Konum tespit edilemedi"}
+            
+        data = get_daily_Data(lat, lon)
+        if data:
+            data["coordinates"] = {"longitude": lon, "latitude": lat}
+            return data
+        return {"error": "Hava durumu verisi alınamadı"}
+    except Exception as e:
+        return {"error": f"Hata oluştu: {str(e)}"}
+
+@router.post("/dailyet0/auto")
+async def daily_et0_auto(request: AutoRequest):
+    """Otomatik konum tespiti ile günlük ET0 verisi"""
+    try:
+        lon, lat = get_automatic_coordinates()
+        if lon is None or lat is None:
+            return {"error": "Konum tespit edilemedi"}
+            
+        data = get_daily_et0(lat, lon)
+        if data:
+            data["coordinates"] = {"longitude": lon, "latitude": lat}
+            return data
+        return {"error": "ET0 verisi alınamadı"}
+    except Exception as e:
+        return {"error": f"Hata oluştu: {str(e)}"}
+
+@router.post("/dailyweather/manual")
+async def daily_weather_manual(request: ManualRequest):
+    """Manuel koordinatlar ile günlük hava durumu"""
+    try:
+        data = get_daily_Data(request.latitude, request.longitude)
+        if data:
+            data["coordinates"] = {
+                "longitude": request.longitude, 
+                "latitude": request.latitude
+            }
+            return data
+        return {"error": "Hava durumu verisi alınamadı"}
+    except Exception as e:
+        return {"error": f"Hata oluştu: {str(e)}"}
+
+@router.post("/dailyet0/manual")
+async def daily_et0_manual(request: ManualRequest):
+    """Manuel koordinatlar ile günlük ET0 verisi"""
+    try:
+        data = get_daily_et0(request.latitude, request.longitude)
+        if data:
+            data["coordinates"] = {
+                "longitude": request.longitude,
+                "latitude": request.latitude
+            }
+            return data
+        return {"error": "ET0 verisi alınamadı"}
+    except Exception as e:
+        return {"error": f"Hata oluştu: {str(e)}"}
+
+
