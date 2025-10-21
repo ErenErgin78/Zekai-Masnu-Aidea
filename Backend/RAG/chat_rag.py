@@ -1,35 +1,74 @@
-# chat_rag.py
+# chat_rag.py - Token Optimizasyonlu
 from rag_processor import RAGProcessor
 from gemini_client import GeminiClient
 import os
-import shutil
-import time
 import warnings
 
 warnings.filterwarnings('ignore')
 
 class RAGChatbot:
-    def __init__(self):
+    def __init__(self, max_sources=3, max_context_length=3000):
+        print("🤖 RAG Chatbot başlatılıyor...")
         self.rag_processor = RAGProcessor()
         self.gemini_client = GeminiClient()
         self.conversation_history = []
+        self.max_sources = max_sources  # Token tasarrufu için
+        self.max_context_length = max_context_length  # Context token limiti
+        print("✅ RAG Chatbot hazır!")
     
-    def query(self, question):
+    def query(self, question: str, num_sources: int = None):
+        """Soru sor ve cevap al
+        
+        Args:
+            question: Kullanıcı sorusu
+            num_sources: Kaç kaynak kullanılacak (None ise default kullanılır)
+        """
+        print(f"\n📝 Soru: {question}")
+        
+        # Kaynak sayısını belirle
+        k = num_sources if num_sources is not None else self.max_sources
+        
         # Benzer içerikleri bul
-        similar_docs = self.rag_processor.search_similar(question, k=5)
+        similar_docs = self.rag_processor.search_similar(question, k=k)
         
         if not similar_docs:
-            return "❌ İlgili içerik bulunamadı. Lütfen daha farklı bir soru deneyin.", []
+            print("⚠️ İlgili içerik bulunamadı")
+            return "Üzgünüm, bu konuyla ilgili kaynaklarımda yeterli bilgi bulamadım. Lütfen başka bir şekilde sormayı deneyin veya farklı bir konu hakkında soru sorun.", []
+        
+        print(f"✅ {len(similar_docs)} kaynak bulundu")
+        
+        # Context oluştur - token limiti ile
+        context_parts = []
+        current_length = 0
+        
+        for doc in similar_docs:
+            content = doc.page_content
+            content_length = len(content)
             
-        context = "\n".join([doc.page_content for doc in similar_docs])
+            # Token limiti kontrolü (yaklaşık: 1 token ≈ 4 karakter)
+            if current_length + content_length > self.max_context_length:
+                # Kalan alanı kullan
+                remaining = self.max_context_length - current_length
+                if remaining > 100:  # En az 100 karakter ekle
+                    context_parts.append(content[:remaining])
+                break
+            
+            context_parts.append(content)
+            current_length += content_length
+        
+        context = "\n\n".join(context_parts)
+        
+        print(f"📊 Context uzunluğu: {len(context)} karakter (~{len(context)//4} token)")
         
         # Gemini'ye sor
+        print("🤔 Gemini cevap üretiyor...")
         response = self.gemini_client.generate_response(question, context)
         
         # Konuşma geçmişine ekle
         self.conversation_history.append({
             "soru": question,
-            "cevap": response
+            "cevap": response,
+            "kaynak_sayisi": len(similar_docs)
         })
         
         return response, similar_docs
@@ -52,32 +91,15 @@ class RAGChatbot:
                     print(f"  {i}. {source_name}")
 
 def setup_vector_store():
-    """Vektör veritabanını kontrol et ve gerekirse oluştur"""
+    """Vektör veritabanını kontrol et"""
     vector_store_path = "vector_store"
+    sqlite_file = os.path.join(vector_store_path, "chroma.sqlite3")
     
-    if os.path.exists(vector_store_path):
-        try:
-            from langchain_chroma import Chroma
-            from langchain_huggingface import HuggingFaceEmbeddings
-            
-            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-            temp_store = Chroma(persist_directory=vector_store_path, embedding_function=embeddings)
-            doc_count = temp_store._collection.count()
-            
-            del temp_store
-            time.sleep(0.5)
-            
-            if doc_count > 0:
-                print(f"✅ Vektör veritabanı hazır ({doc_count} doküman)")
-                return True
-            else:
-                print("⚠️ Vektör veritabanı boş!")
-                return False
-        except Exception as e:
-            print(f"⚠️ Vektör veritabanı hatası: {e}")
-            return False
+    if os.path.exists(sqlite_file):
+        print(f"✅ Vektör veritabanı bulundu: {sqlite_file}")
+        return True
     else:
-        print("❌ Vektör veritabanı bulunamadı!")
+        print(f"❌ Vektör veritabanı bulunamadı: {sqlite_file}")
         return False
 
 def main():
@@ -88,16 +110,20 @@ def main():
     
     # Vektör veritabanını kontrol et
     if not setup_vector_store():
-        print("\n📥 PDF'ler işleniyor, lütfen bekleyin...")
+        print("\n🔥 PDF'ler işleniyor, lütfen bekleyin...")
         rag_processor = RAGProcessor()
-        rag_processor.load_and_process_pdfs()
-        print("✅ İşlem tamamlandı!")
+        success = rag_processor.load_and_process_pdfs()
+        if success:
+            print("✅ İşlem tamamlandı!")
+        else:
+            print("❌ PDF işleme başarısız! RAG devre dışı.")
+            return
     
-    # Chatbot'u başlat
-    chatbot = RAGChatbot()
+    # Chatbot'u başlat (token optimizasyonlu)
+    chatbot = RAGChatbot(max_sources=3, max_context_length=3000)
     
-    print("\n💬 Merhaba! Organik tarım hakkında sorularını cevaplayabilirim.")
-    print("📝 İpucu: 'çıkış', 'exit' veya 'quit' yazarak çıkabilirsin.\n")
+    print("\n💬 Merhaba! Organik tarım hakkındaki sorularını cevaplayabilirim.")
+    print("🔍 İpucu: 'çıkış', 'exit' veya 'quit' yazarak çıkabilirsin.\n")
     print("=" * 60)
     
     while True:
@@ -117,9 +143,7 @@ def main():
                 continue
             
             # Cevap al
-            print("\n💭 Düşünüyorum...", end="\r")
             response, sources = chatbot.query(user_input)
-            print(" " * 50, end="\r")  # Temizle
             print(f"\n🤖 Asistan:\n{response}")
             
             # Kaynakları göster
@@ -130,6 +154,8 @@ def main():
             break
         except Exception as e:
             print(f"\n❌ Bir hata oluştu: {e}")
+            import traceback
+            traceback.print_exc()
             print("Lütfen tekrar deneyin.")
     
     # Konuşma özeti

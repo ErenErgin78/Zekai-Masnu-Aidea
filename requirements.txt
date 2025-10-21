@@ -1,0 +1,54 @@
+# ===================================
+# AIDEA PROJECT - REQUIREMENTS
+# ===================================
+
+# Core Dependencies
+python-dotenv==1.0.0
+
+# LangChain Ecosystem (Güncel versiyonlar)
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-chroma>=0.1.0
+langchain-text-splitters>=0.3.0
+
+# Embeddings & Vector Store
+sentence-transformers>=2.3.1
+chromadb>=0.4.22
+
+# PDF Processing
+pypdf>=4.0.0
+PyPDF2>=3.0.0
+
+# Google Generative AI
+google-generativeai>=0.3.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Pydantic (LangChain dependency fix)
+pydantic>=2.6.0
+
+# HTTP Requests
+requests>=2.31.0
+httpx>=0.27.0
+
+# Async Support
+aiohttp>=3.9.0
+
+# Environment & System
+typing-extensions>=4.9.0
+
+# Optional: GPU Support (uncomment if needed)
+# torch>=2.1.0
+# torchvision>=0.16.0
+# torchaudio>=2.1.0
+
+# Optional: Advanced NLP (uncomment if needed)
+# transformers>=4.36.0
+# tokenizers>=0.15.0
+
+# Development Tools (optional)
+# pytest>=7.4.0
+# black>=23.12.0
+# flake8>=7.0.0
