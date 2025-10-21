@@ -314,12 +314,12 @@ class AideaServiceManager:
                     self.tools["rag_tool"] = {
                         'instance': rag_tool_module.RAGTool(
                             rag_chatbot=rag_chatbot,
-                            max_response_length=500  # Token tasarrufu için
+                            max_response_length=None  # Sınırsız - tam cevap göster
                         ),
                         'module': rag_tool_module,
                         'class': rag_tool_module.RAGTool
                     }
-                    print("✅ RAG Tool eklendi (Token optimizasyonlu)")
+                    print("✅ RAG Tool eklendi (Tam cevap modu)")
                 else:
                     print("⚠️ RAG Chatbot bulunamadı, RAG Tool eklenemedi")
             

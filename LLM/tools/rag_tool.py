@@ -2,11 +2,11 @@
 from typing import Dict, Any, List
 
 class RAGTool:
-    def __init__(self, rag_chatbot=None, max_response_length=500):
+    def __init__(self, rag_chatbot=None, max_response_length=None):
         self.name = "RAG Knowledge Tool"
         self.description = "Organik tarım bilgi bankasından bilgi getirir"
         self.rag_chatbot = rag_chatbot
-        self.max_response_length = max_response_length
+        self.max_response_length = max_response_length  # None = sınırsız
     
     def query_knowledge(self, question: str) -> Dict[str, Any]:
         """RAG sisteminden bilgi al"""
@@ -62,8 +62,8 @@ class RAGTool:
             answer = result["answer"]
             sources = result["sources"]
             
-            # Token tasarrufu için cevabı kısalt
-            if len(answer) > self.max_response_length:
+            # Token sınırı varsa kısalt
+            if self.max_response_length and len(answer) > self.max_response_length:
                 answer = answer[:self.max_response_length] + "..."
             
             response = f"📚 RAG Bilgi:\n{answer}"
