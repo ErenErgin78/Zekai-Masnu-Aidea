@@ -8,8 +8,6 @@ import atexit
 import subprocess
 import time
 
-from Backend.API.MachineLearning.Code.data_clean import BASE_DIR
-
 # Çıkışta API sürecini durdur
 api_process = None
 
@@ -89,7 +87,7 @@ async def start_soil_api():
     # API'yi başlat
     try:
         # API dizinine git
-        api_dir = os.path.join(BASE_DIR, "Backend", "API")
+        api_dir = os.path.join(PathConfig.BASE_DIR, "Backend", "API")
         
         # Uvicorn'u subprocess olarak başlat ve global değişkene kaydet
         api_process = subprocess.Popen([
