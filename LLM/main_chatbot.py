@@ -8,12 +8,14 @@ import atexit
 import subprocess
 import time
 
+from Backend.API.MachineLearning.Code.data_clean import BASE_DIR
+
 # Çıkışta API sürecini durdur
 api_process = None
 
 # --- Yol Konfigürasyonu ---
 class PathConfig:
-    BASE_DIR = r"C:\Users\HUSOCAN\Desktop\Projelerim\Zekai-Masnu-Aidea"
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     BACKEND_API = os.path.join(BASE_DIR, "Backend", "API", "SoilType")
     BACKEND_RAG = os.path.join(BASE_DIR, "Backend", "RAG")
     LLM_DIR = os.path.join(BASE_DIR, "LLM")
@@ -87,7 +89,7 @@ async def start_soil_api():
     # API'yi başlat
     try:
         # API dizinine git
-        api_dir = r"C:\Users\HUSOCAN\Desktop\Projelerim\Zekai-Masnu-Aidea\Backend\API"
+        api_dir = os.path.join(BASE_DIR, "Backend", "API")
         
         # Uvicorn'u subprocess olarak başlat ve global değişkene kaydet
         api_process = subprocess.Popen([
