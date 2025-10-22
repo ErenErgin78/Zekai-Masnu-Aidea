@@ -9,7 +9,7 @@ from enum import Enum
 
 # --- Yol Konfigürasyonu ---
 class PathConfig:
-    BASE_DIR = r"C:\Users\HUSOCAN\Desktop\Projelerim\Zekai-Masnu-Aidea"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     BACKEND_API = os.path.join(BASE_DIR, "Backend", "API", "SoilType")
     BACKEND_RAG = os.path.join(BASE_DIR, "Backend", "RAG")
     LLM_DIR = os.path.join(BASE_DIR, "LLM")
