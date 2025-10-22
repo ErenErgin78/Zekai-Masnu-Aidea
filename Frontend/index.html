@@ -1,1 +1,60 @@
-<!-- Frontend ana sayfa -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIDEA - Tarım Asistanı</title>
+    <meta name="description" content="Yapay zeka destekli tarım asistanı">
+    <meta name="theme-color" content="#1a1a1a">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <!-- Ana Container -->
+    <div class="app-container">
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span class="title-icon">🌱</span>
+                    <h1>AIDEA</h1>
+                </div>
+                <div class="theme-toggle">
+                    <button id="themeToggle" class="theme-btn">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div class="welcome-icon">🤖</div>
+                    <h3>Merhaba! Ben AIDEA</h3>
+                    <p>Tarım konusunda size yardımcı olabilirim. Sorularınızı sorun!</p>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." autocomplete="off">
+                    <button id="sendButton" class="send-btn">
+                        <span class="send-icon">📤</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="static/js/main.js"></script>
+</body>
+</html>
