@@ -7,19 +7,64 @@ from pathlib import Path
 import atexit
 import subprocess
 import time
+import json
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+import uvicorn
 
 # Çıkışta API sürecini durdur
 api_process = None
 
+# Global chatbot instance
+chatbot_instance = None
+service_manager_instance = None
+
+# FastAPI app for frontend communication
+app = FastAPI(
+    title="Aidea Chatbot API",
+    version="1.0.0",
+    description="Chatbot API for frontend communication"
+)
+
 # --- Yol Konfigürasyonu ---
 class PathConfig:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    FRONTEND_DIR = os.path.join(BASE_DIR, "Frontend")
+    FRONTEND_STATIC_DIR = os.path.join(FRONTEND_DIR, "static")
     BACKEND_API = os.path.join(BASE_DIR, "Backend", "API", "SoilType")
     BACKEND_RAG = os.path.join(BASE_DIR, "Backend", "RAG")
     LLM_DIR = os.path.join(BASE_DIR, "LLM")
     AGENTS_DIR = os.path.join(LLM_DIR, "agents")
     CHAINS_DIR = os.path.join(LLM_DIR, "chains")
     TOOLS_DIR = os.path.join(LLM_DIR, "tools")
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Frontend için
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Serve Frontend static files under /static
+app.mount("/static", StaticFiles(directory=PathConfig.FRONTEND_STATIC_DIR), name="static")
+
+# Pydantic models
+class ChatRequest(BaseModel):
+    message: str
+    conversation_id: int = 0
+    user_location: dict = None
+
+class ChatResponse(BaseModel):
+    success: bool
+    response: str = ""
+    error: str = ""
+    timestamp: float
+    conversation_id: int
 
 # Yolları Python path'ine ekle
 sys.path.extend([
@@ -151,8 +196,69 @@ def cleanup_api():
 # Uygulama kapatıldığında cleanup_api fonksiyonunu çağır
 atexit.register(cleanup_api)
 
-async def run_chatbot():
-    """Chatbot'u başlat ve çalıştır"""
+# API Endpoints and Frontend serving
+@app.get("/")
+def root():
+    """Serve the Frontend index.html at root so UI loads on 8001"""
+    index_path = os.path.join(PathConfig.FRONTEND_DIR, "index.html")
+    return FileResponse(index_path)
+
+@app.get("/manifest.json")
+async def manifest():
+    return FileResponse(os.path.join(PathConfig.FRONTEND_DIR, "manifest.json"))
+
+@app.get("/api/health")
+async def api_health():
+    return {"status": "ok", "service": "Aidea Chatbot API"}
+
+# Eski /api/chat endpoint'i kaldırıldı - sadece /chat/ kullanılıyor
+
+# Eski run_chatbot fonksiyonu kaldırıldı - sadece Web API modu kullanılıyor
+
+async def main():
+    """Ana fonksiyon - Sadece Web API modu"""
+    
+    print("""
+╔══════════════════════════════════════════════════════════╗
+║              🌱 AIDEA TARIM ASİSTANI 🌱                  ║
+║                                                          ║
+║  Organik Tarım | Toprak Analizi | Hava Durumu          ║
+╚══════════════════════════════════════════════════════════╝
+    """)
+    
+    print("🌐 Web API Modu başlatılıyor...")
+    await run_web_api()
+
+async def run_web_api():
+    """Web API modu - Frontend için"""
+    print("🌐 Web API Modu başlatılıyor...")
+    
+    # Chatbot'u başlat (input beklemeden)
+    await initialize_chatbot()
+    
+    if not chatbot_instance:
+        print("❌ Chatbot başlatılamadı!")
+        return
+    
+    print("\n🚀 Web API sunucusu başlatılıyor...")
+    print("📱 Frontend: Frontend/index.html dosyasını tarayıcıda açın")
+    print("🔗 API: http://localhost:8001")
+    print("📚 Docs: http://localhost:8001/docs")
+    print("\n⏹️ Durdurmak için Ctrl+C")
+    
+    # Web API'yi başlat
+    config = uvicorn.Config(
+        app=app,
+        host="0.0.0.0",
+        port=8001,
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+    await server.serve()
+
+async def initialize_chatbot():
+    """Chatbot'u başlat (input beklemeden)"""
+    global chatbot_instance, service_manager_instance
     
     print("🌱 Aidea Tarım Asistanı")
     print("=" * 60)
@@ -161,7 +267,7 @@ async def run_chatbot():
     api_started = await start_soil_api()
     if not api_started:
         print("❌ Soil API olmadan devam edilemez!")
-        return
+        return False
     
     print("Organik tarım, toprak analizi ve hava durumu asistanınız!")
     print("=" * 60)
@@ -170,6 +276,7 @@ async def run_chatbot():
     print("\n🔧 Servisler başlatılıyor...")
     service_manager = AideaServiceManager()
     await service_manager.initialize_services()
+    service_manager_instance = service_manager
     
     print("\n✅ Tüm servisler hazır!")
     
@@ -180,97 +287,71 @@ async def run_chatbot():
             service_manager=service_manager,
             model_name="models/gemini-2.5-flash"
         )
+        chatbot_instance = chatbot
         print("✅ ChatBot başarıyla başlatıldı!")
+        return True
     except Exception as e:
         print(f"❌ ChatBot başlatma hatası: {e}")
-        return
-    
-    print("\n" + "=" * 60)
-    print("🎯 ChatBot hazır! Soru sormaya başlayabilirsiniz.")
-    print("=" * 60)
-    print("\n💡 Örnek sorular:")
-    print("  • 'Ankara'da bugün hava nasıl?'")
-    print("  • 'Konya için toprak analizi yap (32.5, 37.8)'")
-    print("  • 'Organik kompost nasıl yapılır?'")
-    print("  • 'Bulunduğum yerdeki toprakta hangi ürünler yetişir?'")
-    print("\n📋 Komutlar:")
-    print("  • 'geçmiş' - Konuşma geçmişini göster")
-    print("  • 'sıfırla' - Konuşmayı yeniden başlat")
-    print("  • 'yardım' - Yardım mesajını göster")
-    print("  • 'çıkış' - Programdan çık")
-    print("=" * 60)
-    
-    # Ana chat loop
-    while True:
-        try:
-            print("\n" + "-" * 60)
-            user_input = input("👤 Siz: ").strip()
-            
-            if not user_input:
-                continue
-            
-            # Özel komutlar
-            if user_input.lower() in ['çıkış', 'exit', 'quit', 'q']:
-                print("👋 Görüşmek üzere! İyi günler.")
-                break
-            
-            elif user_input.lower() in ['geçmiş', 'history']:
-                chatbot.print_history()
-                continue
-            
-            elif user_input.lower() in ['sıfırla', 'reset', 'yeni']:
-                chatbot.reset_conversation()
-                print("🔄 Yeni konuşma başlatıldı!")
-                continue
-            
-            elif user_input.lower() in ['yardım', 'help', '?']:
-                print("\n📖 Yardım:")
-                print("  • Doğal dilde soru sorun")
-                print("  • Koordinatları ondalıklı girin (32.5, 37.8)")
-                print("  • 'geçmiş' - Konuşma geçmişi")
-                print("  • 'sıfırla' - Yeni konuşma")
-                print("  • 'çıkış' - Programı kapat")
-                continue
-            
-            # ChatBot'a gönder
-            print("\n🤖 Asistan: ", end="", flush=True)
-            response = await chatbot.chat_async(user_input)
-            print(response)
-            
-        except KeyboardInterrupt:
-            print("\n\n👋 Programdan çıkılıyor...")
-            break
-        except Exception as e:
-            print(f"\n❌ Hata: {e}")
-            print("💡 Tekrar deneyin veya 'yardım' yazın")
+        return False
 
-async def main():
-    """Ana fonksiyon"""
+# Chat endpoint for frontend
+@app.post("/chat/", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
+    """Frontend'den gelen chat mesajlarını işle"""
+    try:
+        if not chatbot_instance:
+            return ChatResponse(
+                success=False,
+                error="Chatbot henüz başlatılmadı",
+                timestamp=time.time(),
+                conversation_id=request.conversation_id
+            )
+        
+        # Chatbot'a mesaj gönder (async olarak)
+        response = await chatbot_instance.chat_async(request.message)
+        
+        return ChatResponse(
+            success=True,
+            response=response,
+            timestamp=time.time(),
+            conversation_id=request.conversation_id
+        )
+        
+    except Exception as e:
+        print(f"❌ Chat endpoint hatası: {e}")
+        return ChatResponse(
+            success=False,
+            error=str(e),
+            timestamp=time.time(),
+            conversation_id=request.conversation_id
+        )
+
+# Root endpoint zaten yukarıda tanımlı - bu kısmı kaldırıyoruz
+
+
+# Uvicorn server'ı başlat
+def start_server():
+    """FastAPI server'ı başlat"""
+    print("\n🚀 FastAPI server başlatılıyor...")
+    print("🌐 Frontend: http://localhost:8001")
+    print("📡 API: http://localhost:8001/chat/")
+    print("=" * 50)
     
-    print("""
-╔══════════════════════════════════════════════════════════╗
-║              🌱 AIDEA TARIM ASİSTANI 🌱                  ║
-║                                                          ║
-║  Organik Tarım | Toprak Analizi | Hava Durumu          ║
-╚══════════════════════════════════════════════════════════╝
-    """)
-    
-    print("\n📋 Mod Seçin:")
-    print("  1. 💬 Normal Chatbot Modu")
-    print("  2. 🚪 Çıkış")
-    
-    choice = input("\nSeçiminiz (1-2): ").strip()
-    
-    if choice == '1':
-        await run_chatbot()
-    elif choice == '2':
-        print("👋 Görüşmek üzere!")
-    else:
-        print("❌ Geçersiz seçim! Lütfen 1 veya 2 girin.")
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8001,
+        log_level="info"
+    )
 
 if __name__ == "__main__":
     try:
+        # Önce servisleri başlat
         asyncio.run(main())
+        
+        # Sonra FastAPI server'ı başlat
+        start_server()
+        
     except KeyboardInterrupt:
         print("\n\n👋 Program kapatılıyor...")
     except Exception as e:

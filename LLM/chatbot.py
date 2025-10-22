@@ -1,6 +1,7 @@
 # chatbot.py - Gemini Function Calling ile Multi-Tool ChatBot
 import os
 import json
+import time
 import google.generativeai as genai
 from typing import Dict, List, Any, Optional, Tuple
 from dotenv import load_dotenv
@@ -40,7 +41,7 @@ class OrganicFarmingChatBot:
         )
         
         # Chat session - MANUEL function calling kullanacağız
-        self.chat = self.model.start_chat(enable_automatic_function_calling=False)
+        self.chat_session = self.model.start_chat(enable_automatic_function_calling=False)
         
         print(f"✅ ChatBot başlatıldı: {model_name}")
         print(f"🔧 {len(self.tools)} tool tanımlandı")
@@ -232,13 +233,13 @@ class OrganicFarmingChatBot:
     
     async def chat_async(self, user_message: str) -> str:
         """
-        Kullanıcı mesajını işle ve cevap üret (async)
+        Kullanıcı mesajını işle ve cevap üret (async) - JSON formatında response döndürür
         
         Args:
             user_message: Kullanıcının mesajı
             
         Returns:
-            Chatbot'un cevabı
+            JSON formatında chatbot cevabı
         """
         try:
             # Konuşma geçmişine ekle
@@ -256,7 +257,7 @@ class OrganicFarmingChatBot:
             print(f"📨 Gemini'ye gönderiliyor: {context[:100]}...")
             
             # Gemini'ye gönder
-            response = self.chat.send_message(context)
+            response = self.chat_session.send_message(context)
             
             # GELİŞTİRİLMİŞ Function calling - BİRDEN FAZLA TOOL DESTEĞİ
             bot_response = await self._handle_function_calls(response)
@@ -271,14 +272,31 @@ class OrganicFarmingChatBot:
             if len(self.conversation_history) > self.max_history * 2:
                 self.conversation_history = self.conversation_history[-self.max_history * 2:]
             
-            return bot_response
+            # JSON formatında response döndür
+            json_response = {
+                "success": True,
+                "response": bot_response,
+                "timestamp": time.time(),
+                "conversation_id": len(self.conversation_history) // 2
+            }
+            
+            return json.dumps(json_response, ensure_ascii=False, indent=2)
             
         except Exception as e:
             error_msg = f"❌ Bir hata oluştu: {str(e)}"
             print(error_msg)
             import traceback
             traceback.print_exc()
-            return error_msg
+            
+            # Hata durumunda da JSON formatında döndür
+            error_response = {
+                "success": False,
+                "error": error_msg,
+                "timestamp": time.time(),
+                "conversation_id": len(self.conversation_history) // 2
+            }
+            
+            return json.dumps(error_response, ensure_ascii=False, indent=2)
     
     async def _handle_function_calls(self, response) -> str:
         """
@@ -334,7 +352,7 @@ class OrganicFarmingChatBot:
                         response={"result": function_results[0]["result"]}
                     )
                 )
-                final_response = self.chat.send_message(function_response_part)
+                final_response = self.chat_session.send_message(function_response_part)
             else:
                 function_response_parts = []
                 for func_result in function_results:
@@ -346,7 +364,7 @@ class OrganicFarmingChatBot:
                             )
                         )
                     )
-                final_response = self.chat.send_message(function_response_parts)
+                final_response = self.chat_session.send_message(function_response_parts)
 
             return final_response.text
         else:
