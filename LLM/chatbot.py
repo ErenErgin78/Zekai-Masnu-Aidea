@@ -173,7 +173,7 @@ class OrganicFarmingChatBot:
    - Kullanım: "Bulunduğum yerdeki toprak nasıl?" gibi sorularda
 
 4. **query_organic_farming_knowledge**: Organik tarım bilgi bankası (RAG)
-   - Kullanım: Organik tarım teknikleri, sertifikasyon, kompost vs. sorularında
+   - Kullanüm: Organik tarım teknikleri, sertifikasyon, kompost vs. sorularında
 
 5. **comprehensive_soil_analysis**: Kapsamlı toprak raporu (Chain)
    - Kullanım: Detaylı toprak analizi istendiğinde
@@ -191,8 +191,9 @@ class OrganicFarmingChatBot:
 **Orta Seviye** → Chain kullan:
 - "Bu koordinattaki toprağı detaylı analiz et" → comprehensive_soil_analysis
 
-**Karmaşık Sorular** → Agent kullan:
-- "Bulunduğum yerde hangi ürünler yetişir ve nasıl organik yetiştiririm?" → research_agent_query
+**Karmaşık Sorular** → Birden fazla tool veya agent kullan:
+- "Bulunduğum yerde hangi ürünler yetişir ve nasıl organik yetiştiririm?" → research_agent_query + analyze_soil
+- "Bu bölgenin hava durumu ve toprak yapısına göre ne önerirsiniz?" → get_weather + analyze_soil
 
 🎨 CEVAPLAMA KURALLARI:
 1. **Türkçe ve samimi** bir dille konuş
@@ -205,6 +206,27 @@ class OrganicFarmingChatBot:
 - Koordinat sorularında ONDALIKLI sayı kullan (32.5, 37.8)
 - Kullanıcıdan eksik bilgi varsa **sor**
 - Tool hatası varsa **kibarca** açıkla ve alternatif sun
+- **Karmaşık sorularda birden fazla tool kullanmaktan çekinme**
+
+🔍 TOOL KULLANIM KURALI:
+- Bir tool (fonksiyon) kullanmaya karar verdiysen, SADECE o tool'un sonucunu kullan!
+- Tool çalıştığında kendi bilgini kullanarak ekstra açıklama yapma!
+
+🎯 RESEARCH AGENT KULLANIMI:
+- Kullanıcı karmaşık bir tarım sorusu sorduğunda research_agent_query kullan
+- Eğer kullanıcı konum belirtiyorsa veya "bulunduğum yer" diyorsa, use_soil_data=true yap ve koordinatları ekle
+- Mümkün olduğunca soil data ile zenginleştirilmiş araştırma yap
+
+📍 KOORDINAT ALMA STRATEJİSİ:
+- "Bu bölgede", "şu koordinatlarda", "İstanbul'da" gibi ifadelerde koordinatları ara
+- Koordinat yoksa kullanıcıdan iste: "Hangi bölge/koordinat için analiz yapayım?"
+- Mevcut konum için: get_automatic_location_soil kullan
+
+🚫 ÇOK ÖNEMLİ KURAL:
+- Eğer kullanıcı hava durumu, toprak analizi veya organik tarım ile İLGİLİ OLMAYAN bir soru sorarsa,
+- "Üzgünüm, ben sadece hava durumu, toprak analizi ve organik tarım konularında yardımcı olabilirim. Başka konularda size yardım edemem." şeklinde cevap ver.
+- ASLA kendi alanın dışındaki konularda cevap vermeye çalışma veya uydurma.
+- Eğer bir konuda yeterli bilgin yoksa veya tool'lar cevap veremiyorsa, "Bu konuda şu an size yardımcı olamıyorum" de.
 
 Şimdi kullanıcıya yardımcı olmaya hazırsın! 🌱"""
     
@@ -236,52 +258,8 @@ class OrganicFarmingChatBot:
             # Gemini'ye gönder
             response = self.chat.send_message(context)
             
-            # Function calling kontrolü - DÜZELTİLMİŞ YAKLAŞIM
-            function_called = False
-            bot_response = ""
-
-            if (hasattr(response, 'candidates') and 
-                response.candidates and 
-                hasattr(response.candidates[0].content, 'parts') and 
-                response.candidates[0].content.parts):
-                
-                for part in response.candidates[0].content.parts:
-                    if hasattr(part, 'function_call') and part.function_call:
-                        function_called = True
-                        function_call = part.function_call
-                        function_name = function_call.name
-                        function_args = {}
-                        
-                        # Argümanları dict'e çevir
-                        if hasattr(function_call, 'args'):
-                            for key, value in function_call.args.items():
-                                function_args[key] = value
-                        
-                        print(f"🔧 Tool çağrısı: {function_name}")
-                        print(f"📋 Parametreler: {json.dumps(function_args, indent=2, ensure_ascii=False)}")
-                        
-                        # Function'ı çalıştır
-                        function_result = await self._execute_function(function_name, function_args)
-                        print(f"📦 Function sonucu: {function_result[:200]}...")
-                        
-                        # DOĞRU FORMAT: Function response oluştur
-                        function_response_part = genai.protos.Part(
-                            function_response=genai.protos.FunctionResponse(
-                                name=function_name,
-                                response={"result": function_result}
-                            )
-                        )
-                        
-                        # Sonucu Gemini'ye geri gönder
-                        final_response = self.chat.send_message(function_response_part)
-                        bot_response = final_response.text
-                        break
-                
-                if not function_called:
-                    # Function call yoksa direkt cevabı al
-                    bot_response = response.text
-            else:
-                bot_response = response.text
+            # GELİŞTİRİLMİŞ Function calling - BİRDEN FAZLA TOOL DESTEĞİ
+            bot_response = await self._handle_function_calls(response)
             
             # Konuşma geçmişine ekle
             self.conversation_history.append({
@@ -302,13 +280,86 @@ class OrganicFarmingChatBot:
             traceback.print_exc()
             return error_msg
     
+    async def _handle_function_calls(self, response) -> str:
+        """
+        Birden fazla function call'ı handle et - GÜNCELLENMİŞ
+        """
+        function_calls = []
+        has_text_response = False
+        text_response = ""
+
+        # Response'u parse et
+        if (hasattr(response, 'candidates') and 
+            response.candidates and 
+            hasattr(response.candidates[0].content, 'parts') and 
+            response.candidates[0].content.parts):
+            
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'function_call') and part.function_call:
+                    function_calls.append(part.function_call)
+                elif hasattr(part, 'text') and part.text:
+                    has_text_response = True
+                    text_response += part.text
+
+        # ✅ DEĞİŞİKLİK: Eğer function call varsa, text response'u YOK SAY
+        if function_calls:
+            # SADECE function results ile devam et
+            function_results = []
+            for function_call in function_calls:
+                function_name = function_call.name
+                function_args = {}
+                
+                # Argümanları dict'e çevir
+                if hasattr(function_call, 'args'):
+                    for key, value in function_call.args.items():
+                        function_args[key] = value
+                
+                print(f"🔧 Tool çağrısı: {function_name}")
+                print(f"📋 Parametreler: {json.dumps(function_args, indent=2, ensure_ascii=False)}")
+                
+                # Function'ı çalıştır
+                function_result = await self._execute_function(function_name, function_args)
+                print(f"📦 Function sonucu: {function_result[:200]}...")
+                
+                function_results.append({
+                    "name": function_name,
+                    "result": function_result
+                })
+
+            # Birden fazla function sonucunu Gemini'ye gönder
+            if len(function_results) == 1:
+                function_response_part = genai.protos.Part(
+                    function_response=genai.protos.FunctionResponse(
+                        name=function_results[0]["name"],
+                        response={"result": function_results[0]["result"]}
+                    )
+                )
+                final_response = self.chat.send_message(function_response_part)
+            else:
+                function_response_parts = []
+                for func_result in function_results:
+                    function_response_parts.append(
+                        genai.protos.Part(
+                            function_response=genai.protos.FunctionResponse(
+                                name=func_result["name"],
+                                response={"result": func_result["result"]}
+                            )
+                        )
+                    )
+                final_response = self.chat.send_message(function_response_parts)
+
+            return final_response.text
+        else:
+            # Function call yoksa direkt text cevabını döndür
+            return response.text if hasattr(response, 'text') else text_response
+    
     def chat(self, user_message: str) -> str:
         """Senkron chat metodu (kolaylık için)"""
         import asyncio
         return asyncio.run(self.chat_async(user_message))
     
     async def _execute_function(self, function_name: str, args: Dict) -> Any:
-        """Function call'ları çalıştır"""
+        """Function call'ları çalıştır - GÜNCELLENMİŞ"""
         
         try:
             if function_name == "get_weather":
@@ -379,32 +430,121 @@ class OrganicFarmingChatBot:
                     
             elif function_name == "research_agent_query":
                 query = args.get("query", "")
-                use_soil = args.get("use_soil_data", False)
+                use_soil = args.get("use_soil_data", True)
                 
                 print(f"🔬 Araştırma agent'ı: {query}")
+                print(f"📍 Soil data kullanımı: {use_soil}")
                 
                 soil_data = None
-                if use_soil:
-                    lon = args.get("longitude")
-                    lat = args.get("latitude")
-                    if lon and lat:
-                        soil_data = await self.service_manager.soil_analysis(lon, lat)
+                # ✅ DEĞİŞİKLİK: Koordinat varsa MUTLAKA soil data al
+                lon = args.get("longitude")
+                lat = args.get("latitude")
                 
-                agent = self.service_manager.get_agent("research_agent")
-                if agent:
+                if lon is not None and lat is not None:
+                    print(f"📍 Koordinatlar mevcut: {lon}, {lat} - Soil data alınıyor...")
+                    try:
+                        soil_data = await self.service_manager.soil_analysis(lon, lat)
+                        print(f"✅ Soil data alındı: {soil_data.get('soil_id', 'Bilinmeyen ID')}")
+                        
+                        # Soil data içeriğini kontrol et
+                        if 'classification' in soil_data:
+                            soil_type = soil_data['classification'].get('wrb4_description', 'Bilinmiyor')
+                            print(f"📍 Toprak türü: {soil_type}")
+                        
+                    except Exception as e:
+                        print(f"❌ Soil data alınamadı: {e}")
+                        soil_data = None
+                else:
+                    print("ℹ️ Koordinat yok - soil data kullanılmayacak")
+                
+                # ✅ CRITICAL FIX: Service Manager'dan agent al VEYA yeni oluştur
+                try:
+                    # Önce service manager'dan dene
+                    agent = self.service_manager.get_agent("research_agent")
+                    if agent:
+                        print(f"✅ Service Manager'dan Research Agent alındı")
+                    else:
+                        # Service manager'da yoksa, yeni oluştur
+                        from research_agents import ResearchAgent
+                        
+                        # Service manager'dan tool'ları al
+                        tool_instances = []
+                        for tool_name in ['weather_tool', 'data_visualizer_tool', 'soil_analyzer_tool', 'rag_tool']:
+                            tool = self.service_manager.get_tool(tool_name)
+                            if tool:
+                                tool_instances.append(tool)
+                                print(f"✅ Tool eklendi: {tool_name}")
+                        
+                        agent = ResearchAgent(tools=tool_instances, verbose=True)
+                        print(f"✅ Yeni Research Agent oluşturuldu: {len(tool_instances)} tool ile")
+                    
+                    # Agent'ı çalıştır
                     result = agent.research_soil(query, soil_data)
                     
                     if result.get("success"):
-                        report = f"🔍 Araştırma Bulguları:\n"
-                        report += f"📊 {len(result.get('findings', []))} bulgular\n\n"
-                        report += f"💡 Öneriler:\n"
-                        for rec in result.get("recommendations", []):
-                            report += f"• {rec}\n"
+                        # Detaylı rapor oluştur
+                        report = f"🔍 ARAŞTIRMA RAPORU: {query}\n\n"
+                        
+                        if soil_data:
+                            soil_info = soil_data.get('classification', {}).get('wrb4_description', 'Bilinmiyor')
+                            report += f"📍 ANALİZ EDİLEN TOPRAK: {soil_info}\n"
+                            report += f"📊 Koordinatlar: Boylam={lon}, Enlem={lat}\n\n"
+                        else:
+                            report += "📍 TOPRAK VERİSİ: Mevcut değil (genel bilgiler kullanıldı)\n\n"
+                        
+                        report += f"🛠️ Kullanılan Araçlar: {', '.join(result.get('tools_used', []))}\n\n"
+                        
+                        # Bulguları detaylı göster
+                        findings = result.get("findings", [])
+                        if findings:
+                            report += "📊 BULGULAR:\n"
+                            for i, finding in enumerate(findings, 1):
+                                tool_name = finding.get("tool", "Bilinmeyen")
+                                data = finding.get("data", {})
+                                finding_type = finding.get("type", "")
+                                
+                                report += f"   {i}. {tool_name} ({finding_type}):\n"
+                                
+                                if finding_type == "soil_analysis" and isinstance(data, str):
+                                    report += f"      - {data}\n"
+                                
+                                elif finding_type == "rag_knowledge" and isinstance(data, str):
+                                    # RAG cevabını formatla
+                                    lines = data.split('\n')
+                                    for line in lines[:4]:  # İlk 4 satır
+                                        if line.strip():
+                                            report += f"      - {line.strip()}\n"
+                                
+                                elif finding_type == "weather_info" and isinstance(data, str):
+                                    report += f"      - {data}\n"
+                                
+                                elif isinstance(data, dict):
+                                    if 'title' in data:
+                                        report += f"      - {data['title']}\n"
+                                    if 'soil_requirements' in data:
+                                        report += f"      - Toprak: {data['soil_requirements']}\n"
+                                    if 'climate_requirements' in data:
+                                        report += f"      - İklim: {data['climate_requirements']}\n"
+                                    if 'soil_type' in data:
+                                        report += f"      - Toprak Türü: {data['soil_type']}\n"
+                                    if 'ph_level' in data:
+                                        report += f"      - pH: {data['ph_level']}\n"
+                        
+                        # Öneriler
+                        recommendations = result.get("recommendations", [])
+                        if recommendations:
+                            report += "\n💡 TAVSİYELER:\n"
+                            for rec in recommendations:
+                                report += f"   • {rec}\n"
+                        
                         return report
                     else:
-                        return f"Araştırma hatası: {result.get('error', 'Bilinmeyen hata')}"
-                else:
-                    return "Research agent kullanılamıyor"
+                        return f"❌ Araştırma hatası: {result.get('error', 'Bilinmeyen hata')}"
+                        
+                except ImportError as e:
+                    return f"❌ Research Agent import hatası: {e}"
+                except Exception as e:
+                    return f"❌ Research Agent hatası: {e}"
             
             else:
                 return f"Bilinmeyen fonksiyon: {function_name}"

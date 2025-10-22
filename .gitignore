@@ -103,3 +103,6 @@ dergipark_pdfs/
 vector_store/
 *.bil
 mgm_iklim_verileri.csv
+
+# IGNORE 
+Örnek_Promptlar.txt

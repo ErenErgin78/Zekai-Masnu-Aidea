@@ -359,7 +359,7 @@ class AideaServiceManager:
             traceback.print_exc()
     
     def _load_agents(self):
-        """Agent'ları yükle"""
+        """Agent'ları yükle - GÜNCELLENMİŞ"""
         try:
             # Research Agent
             agent_path = os.path.join(PathConfig.AGENTS_DIR, "research_agents.py")
@@ -367,11 +367,19 @@ class AideaServiceManager:
             agent_module = importlib.util.module_from_spec(spec_agent)
             spec_agent.loader.exec_module(agent_module)
             
-            # Tool listesini hazırla
-            tool_instances = [tool['instance'] for tool in self.tools.values()]
+            # ✅ DEĞİŞİKLİK: Tool listesini hazırla - TÜM TOOL'LARI AL
+            tool_instances = []
+            for tool_name in self.tools.keys():
+                tool_instance = self.tools[tool_name]['instance']
+                if tool_instance:
+                    tool_instances.append(tool_instance)
+                    print(f"✅ Agent için tool eklendi: {tool_name}")
             
-            # Agent instance oluştur
-            research_agent = agent_module.ResearchAgent(tools=tool_instances, verbose=True)
+            # ✅ DEĞİŞİKLİK: ResearchAgent'a tool'ları parametre olarak ver
+            research_agent = agent_module.ResearchAgent(
+                tools=tool_instances,  # Tool'ları parametre olarak ver
+                verbose=True
+            )
             
             self.agents["research_agent"] = {
                 'instance': research_agent,
@@ -379,7 +387,7 @@ class AideaServiceManager:
                 'class': agent_module.ResearchAgent
             }
             
-            print(f"✅ {len(self.agents)} agent yüklendi")
+            print(f"✅ {len(self.agents)} agent yüklendi ({len(tool_instances)} tool ile)")
             
         except Exception as e:
             print(f"❌ Agent yükleme hatası: {e}")
