@@ -89,9 +89,17 @@ async def start_soil_api():
         # API dizinine git
         api_dir = os.path.join(PathConfig.BASE_DIR, "Backend", "API")
         
+        # Backend/API/env virtual environment'ını kullan
+        env_python = os.path.join(api_dir, "env", "Scripts", "python.exe")
+        if not os.path.exists(env_python):
+            print(f"❌ Virtual environment bulunamadı: {env_python}")
+            return False
+        
+        print(f"🔍 Virtual environment Python: {env_python}")
+        
         # Uvicorn'u subprocess olarak başlat ve global değişkene kaydet
         api_process = subprocess.Popen([
-            sys.executable, "-m", "uvicorn", 
+            env_python, "-m", "uvicorn", 
             "main:app",
             "--host", "0.0.0.0", 
             "--port", "8000",

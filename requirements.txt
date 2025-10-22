@@ -1,54 +1,104 @@
 # ===================================
-# AIDEA PROJECT - REQUIREMENTS
+# AIDEA PROJECT - UNIFIED REQUIREMENTS
+# Modern, Secure & Optimized
 # ===================================
 
-# Core Dependencies
-python-dotenv==1.0.0
+# ===================================
+# CORE DEPENDENCIES
+# ===================================
+python-dotenv>=1.0.0
+typing-extensions>=4.9.0
 
-# LangChain Ecosystem (Güncel versiyonlar)
-langchain>=0.3.0
-langchain-community>=0.3.0
+# ===================================
+# AI & LLM DEPENDENCIES
+# ===================================
+# Google Generative AI (MODERN VERSİYON)
+google-generativeai>=0.8.0  # Modern versiyon
+
+# LangChain Ecosystem (MODERN VERSİYONLAR)
+langchain-community>=0.3.0  # Modern versiyon
 langchain-chroma>=0.1.0
-langchain-text-splitters>=0.3.0
+langchain-text-splitters>=1.0.0  # Modern versiyon
+langchain-core>=1.0.0  # Modern versiyon
+# langchain>=0.2.17  # Ana paket - gerekirse aç
+# langchain-google-genai>=0.0.1  # GEREKİRSE AÇ
+# langchain-huggingface>=0.0.1  # GEREKİRSE AÇ
 
-# Embeddings & Vector Store
-sentence-transformers>=2.3.1
+# Embeddings & Vector Store (RAG İÇİN GEREKLİ)
+sentence-transformers>=2.3.1  # RAG embeddings için gerekli
 chromadb>=0.4.22
 
-# PDF Processing
+# ===================================
+# DATA PROCESSING & ANALYSIS
+# ===================================
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+geopandas>=0.14.0
+
+# ===================================
+# WEB FRAMEWORK & API
+# ===================================
+fastapi>=0.104.1
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+
+# ===================================
+# HTTP & NETWORKING
+# ===================================
+httpx>=0.27.0
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# ===================================
+# DATABASE & STORAGE
+# ===================================
+pyodbc>=5.0.1
+
+# ===================================
+# GEOSPATIAL & LOCATION
+# ===================================
+rasterio>=1.3.9
+geocoder>=1.38.1
+geopy>=2.4.0
+
+# ===================================
+# PDF & DOCUMENT PROCESSING
+# ===================================
 pypdf>=4.0.0
 PyPDF2>=3.0.0
 
-# Google Generative AI
-google-generativeai>=0.3.0
+# ===================================
+# SECURITY & PERFORMANCE
+# ===================================
+cryptography>=41.0.0
+asyncio-throttle>=1.0.0
 
-# Data Processing
-numpy>=1.24.0
-pandas>=2.0.0
-
-# Pydantic (LangChain dependency fix)
+# ===================================
+# VALIDATION & SERIALIZATION
+# ===================================
 pydantic>=2.6.0
 
-# HTTP Requests
-requests>=2.31.0
-httpx>=0.27.0
+# ===================================
+# WINDOWS SPECIFIC
+# ===================================
+winsdk>=1.0.0b10
 
-# Async Support
-aiohttp>=3.9.0
+# ===================================
+# OPTIONAL: ADVANCED FEATURES
+# ===================================
+# Uncomment if needed:
 
-# Environment & System
-typing-extensions>=4.9.0
-
-# Optional: GPU Support (uncomment if needed)
+# GPU Support
 # torch>=2.1.0
 # torchvision>=0.16.0
 # torchaudio>=2.1.0
 
-# Optional: Advanced NLP (uncomment if needed)
+# Advanced NLP
 # transformers>=4.36.0
 # tokenizers>=0.15.0
 
-# Development Tools (optional)
+# Development Tools
 # pytest>=7.4.0
 # black>=23.12.0
 # flake8>=7.0.0
