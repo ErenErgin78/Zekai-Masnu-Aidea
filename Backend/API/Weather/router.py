@@ -277,8 +277,8 @@ def get_data_by_date(latitude, longitude, start_date, end_date):
     """ Belirli bir tarih için veri alma fonksiyonu """
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
-    "latitude": 41.01,
-    "longitude": 28.98,
+    "latitude": latitude,
+    "longitude": longitude,
     "start_date": start_date,
     "end_date": end_date,
     "daily": "et0_fao_evapotranspiration,precipitation_sum,temperature_2m_mean,apparent_temperature_max,apparent_temperature_mean,apparent_temperature_min,rain_sum,showers_sum,snowfall_sum,precipitation_hours,precipitation_probability_mean,daylight_duration,sunshine_duration,wind_direction_10m_dominant,wind_speed_10m_max,wind_gusts_10m_max,weather_code",
