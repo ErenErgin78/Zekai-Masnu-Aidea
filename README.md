@@ -101,12 +101,6 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### Adım 4: Sistemi Başlatın
-```bash
-# Terminal 1: Backend API'leri
-cd Backend/API
-python main.py
-
-# Terminal 2: Ana Chatbot
 cd LLM  
 python main_chatbot.py
 ```
