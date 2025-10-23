@@ -52,16 +52,33 @@ class OrganicFarmingChatBot:
         function_declarations = [
             {
                 "name": "get_weather",
-                "description": "Belirtilen şehir için hava durumu bilgisi getirir. Sıcaklık, nem ve genel durum bilgisi döner.",
+                "description": "Gerçek hava durumu verilerini getirir. Günlük ve saatlik tahminler, sıcaklık, nem, yağış, rüzgar bilgileri sağlar.",
                 "parameters": {
                     "type": "OBJECT",
                     "properties": {
-                        "city": {
+                        "weather_type": {
                             "type": "STRING",
-                            "description": "Türkiye'deki şehir adı (örn: İstanbul, Ankara, İzmir, Konya)"
+                            "description": "Hava durumu türü: 'daily' (günlük) veya 'hourly' (saatlik)",
+                            "enum": ["daily", "hourly"]
+                        },
+                        "days": {
+                            "type": "NUMBER",
+                            "description": "Kaç günlük tahmin (1-16 arası, varsayılan 1)"
+                        },
+                        "longitude": {
+                            "type": "NUMBER",
+                            "description": "Boylam koordinatı (manuel konum için)"
+                        },
+                        "latitude": {
+                            "type": "NUMBER",
+                            "description": "Enlem koordinatı (manuel konum için)"
+                        },
+                        "use_auto_location": {
+                            "type": "BOOLEAN",
+                            "description": "Otomatik konum tespiti kullan (true) veya manuel koordinat (false)"
                         }
                     },
-                    "required": ["city"]
+                    "required": ["weather_type", "use_auto_location"]
                 }
             },
             {
@@ -158,14 +175,17 @@ class OrganicFarmingChatBot:
 
 🎯 GÖREVIN:
 - Toprak analizi yaparak çiftçilere tarımsal öneriler sunmak
-- Hava durumu bilgisi sağlamak
+- Gerçek hava durumu verilerini sağlamak (günlük ve saatlik tahminler)
 - Organik tarım konularında bilgi vermek
 - Kullanıcının ihtiyacına göre en uygun tool'ları kullanmak
+- Hava durumu ve toprak analizini birleştirerek kapsamlı tarımsal öneriler sunmak
 
 🔧 KULLANABILECEĞIN TOOL'LAR:
 
-1. **get_weather**: Şehir için hava durumu
-   - Kullanım: Hava durumu sorularında
+1. **get_weather**: Gerçek hava durumu verileri (günlük/saatlik)
+   - Kullanım: Hava durumu sorularında, tarımsal planlama için
+   - Otomatik konum tespiti veya manuel koordinat kullanabilir
+   - Günlük ve saatlik tahminler sağlar
 
 2. **analyze_soil**: Koordinata göre toprak analizi
    - Kullanım: Belirli bir koordinat için toprak bilgisi istendiğinde
@@ -185,7 +205,7 @@ class OrganicFarmingChatBot:
 📋 TOOL SEÇME STRATEJİSİ:
 
 **Basit Sorular** → Tek tool:
-- "Ankara'da hava nasıl?" → get_weather
+- "Hava durumu nasıl?" → get_weather (otomatik konum)
 - "32.5, 37.8 koordinatındaki toprak nasıl?" → analyze_soil
 - "Organik gübre nasıl yapılır?" → query_organic_farming_knowledge
 
@@ -195,6 +215,7 @@ class OrganicFarmingChatBot:
 **Karmaşık Sorular** → Birden fazla tool veya agent kullan:
 - "Bulunduğum yerde hangi ürünler yetişir ve nasıl organik yetiştiririm?" → research_agent_query + analyze_soil
 - "Bu bölgenin hava durumu ve toprak yapısına göre ne önerirsiniz?" → get_weather + analyze_soil
+- "Gübreleme ve sulama için hava durumu nasıl?" → get_weather + analyze_soil (birleşik analiz)
 
 🎨 CEVAPLAMA KURALLARI:
 1. **Türkçe ve samimi** bir dille konuş
@@ -383,9 +404,28 @@ class OrganicFarmingChatBot:
             if function_name == "get_weather":
                 tool = self.service_manager.get_tool("weather_tool")
                 if tool:
-                    city = args.get("city", "Ankara")
-                    print(f"🌤️ Hava durumu sorgulanıyor: {city}")
-                    result = tool(city)
+                    weather_type = args.get("weather_type", "daily")
+                    days = args.get("days", 1)
+                    use_auto_location = args.get("use_auto_location", True)
+                    longitude = args.get("longitude")
+                    latitude = args.get("latitude")
+                    
+                    print(f"🌤️ Hava durumu sorgulanıyor: {weather_type}, {days} gün")
+                    
+                    if use_auto_location:
+                        result = await tool.get_weather_analysis(
+                            days=days, 
+                            weather_type=weather_type
+                        )
+                    else:
+                        if longitude is None or latitude is None:
+                            return "Manuel konum için koordinatlar gerekli. Boylam ve enlem değerlerini girin."
+                        result = await tool.get_weather_analysis(
+                            coordinates=(longitude, latitude),
+                            days=days,
+                            weather_type=weather_type
+                        )
+                    
                     return result
                 else:
                     return "Hava durumu tool'u kullanılamıyor"

@@ -114,9 +114,9 @@ except Exception as e:
     exit(1)
 
 async def start_soil_api():
-    """Soil API server'ını otomatik başlat"""
+    """API server'ını otomatik başlat (Soil + Weather)"""
     global api_process
-    print("🔧 Soil API server başlatılıyor...")
+    print("🔧 API server başlatılıyor (Soil + Weather)...")
     
     try:
         # API'nin çalışıp çalışmadığını kontrol et
@@ -124,7 +124,7 @@ async def start_soil_api():
         async with httpx.AsyncClient() as client:
             response = await client.get("http://localhost:8000/docs", timeout=2.0)
             if response.status_code == 200:
-                print("✅ Soil API zaten çalışıyor!")
+                print("✅ API zaten çalışıyor!")
                 return True
     except:
         pass  # API çalışmıyor, başlatacağız
@@ -161,7 +161,7 @@ async def start_soil_api():
                 try:
                     response = await client.get("http://localhost:8000/docs", timeout=10.0)
                     if response.status_code == 200:
-                        print("✅ Soil API başarıyla başlatıldı!")
+                        print("✅ API başarıyla başlatıldı!")
                         return True
                     else:
                         print(f"⏳ API yükleniyor... Deneme {i+1}/10")
@@ -170,7 +170,7 @@ async def start_soil_api():
                 
                 time.sleep(3)
         
-        print("❌ Soil API başlatılamadı!")
+        print("❌ API başlatılamadı!")
         return False
         
     except Exception as e:
@@ -180,7 +180,7 @@ async def start_soil_api():
 def cleanup_api():
     """Uygulama kapatıldığında API'yi kapat"""
     global api_process
-    print("🔴 Soil API kapatılıyor...")
+    print("🔴 API kapatılıyor...")
     try:
         if api_process:
             # Sadece terminate et, wait etme
@@ -189,7 +189,7 @@ def cleanup_api():
         import os
         os.system("taskkill /F /IM uvicorn.exe >nul 2>&1")
         os.system("taskkill /F /IM python.exe >nul 2>&1")
-        print("✅ Soil API kapatıldı")
+        print("✅ API kapatıldı")
     except Exception as e:
         print(f"⚠️ API kapatılırken hata: {e}")
 
@@ -263,10 +263,10 @@ async def initialize_chatbot():
     print("🌱 Aidea Tarım Asistanı")
     print("=" * 60)
 
-    # SOIL API'Yİ BAŞLAT
+    # API'Yİ BAŞLAT (Soil + Weather)
     api_started = await start_soil_api()
     if not api_started:
-        print("❌ Soil API olmadan devam edilemez!")
+        print("❌ API olmadan devam edilemez!")
         return False
     
     print("Organik tarım, toprak analizi ve hava durumu asistanınız!")
