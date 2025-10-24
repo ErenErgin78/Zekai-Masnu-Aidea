@@ -13,6 +13,7 @@
 .pdf
 .epub
 *.epub
+PDFs/
 
 # Python
 __pycache__/
