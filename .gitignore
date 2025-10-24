@@ -11,6 +11,8 @@
 .cursor/
 *.pdf
 .pdf
+.mdb
+*.mdb
 
 # Python
 __pycache__/
