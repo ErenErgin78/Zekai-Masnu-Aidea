@@ -9,6 +9,10 @@
 *.env.*
 !.env.example
 .cursor/
+*.pdf
+.pdf
+.epub
+*.epub
 
 # Python
 __pycache__/
@@ -102,6 +106,7 @@ dergipark_pdfs/
 .sqlite3
 vector_store/
 *.bil
+*.mdb
 mgm_iklim_verileri.csv
 
 # IGNORE 
