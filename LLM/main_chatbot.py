@@ -134,10 +134,12 @@ async def start_soil_api():
         # API dizinine git
         api_dir = os.path.join(PathConfig.BASE_DIR, "Backend", "API")
         
-        # Backend/API/env virtual environment'ını kullan
-        env_python = os.path.join(api_dir, "env", "Scripts", "python.exe")
+        # Ana dizin/env virtual environment'ını kullan (genel env)
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        env_python = os.path.join(base_dir, "env", "Scripts", "python.exe")
         if not os.path.exists(env_python):
             print(f"❌ Virtual environment bulunamadı: {env_python}")
+            print(f"💡 Ana dizin: {base_dir}")
             return False
         
         print(f"🔍 Virtual environment Python: {env_python}")
