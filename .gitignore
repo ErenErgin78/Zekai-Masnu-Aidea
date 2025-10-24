@@ -9,6 +9,8 @@
 *.env.*
 !.env.example
 .cursor/
+*.pdf
+.pdf
 
 # Python
 __pycache__/
