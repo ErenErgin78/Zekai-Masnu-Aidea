@@ -11,7 +11,8 @@
 .cursor/
 *.pdf
 .pdf
-
+.epub
+*.epub
 # Python
 __pycache__/
 *.py[cod]
