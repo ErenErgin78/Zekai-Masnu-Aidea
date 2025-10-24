@@ -69,6 +69,22 @@ pypdf>=4.0.0
 PyPDF2>=3.0.0
 
 # ===================================
+# UNSTRUCTURED.IO & PDF PROCESSING
+# ===================================
+unstructured
+unstructured-inference
+pdf2image
+poppler-utils
+pymupdf
+python-docx
+openpyxl
+pdfminer.six
+pi-heif
+pytesseract
+pillow
+
+
+# ===================================
 # SECURITY & PERFORMANCE
 # ===================================
 cryptography>=41.0.0
@@ -83,6 +99,8 @@ pydantic>=2.6.0
 # WINDOWS SPECIFIC
 # ===================================
 winsdk>=1.0.0b10
+python-magic-bin>=0.4.14
+libmagic>=1.0
 
 # ===================================
 # OPTIONAL: ADVANCED FEATURES
