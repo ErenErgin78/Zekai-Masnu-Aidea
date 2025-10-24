@@ -22,10 +22,11 @@ Bu proje, toprak verilerini analiz etmek, görselleştirmek ve kullanıcılara a
 - 🌍 **Otomatik Konum Tespiti**: Windows Konum Servisi, GPS ve IP tabanlı konum belirleme
 - 🧪 **Toprak Analizi**: Detaylı toprak özelliklerinin analizi ve değerlendirmesi
 - 📊 **Veri Görselleştirme**: Toprak verilerinin anlaşılır raporlara dönüştürülmesi
-- 🌤️ **Hava Durumu**: Bölgesel hava durumu bilgisi entegrasyonu
+- 🌤️ **Gerçek Hava Durumu**: Open-Meteo API ile günlük/saatlik hava durumu tahminleri
 - 📚 **RAG Bilgi Bankası**: Organik tarım bilgi tabanından akıllı sorgulama
 - 🤖 **Akıllı Agentlar**: Araştırma ve analiz için özelleştirilmiş AI agentları
 - 🔗 **Chain Sistemi**: Karmaşık analizler için zincirleme işlem akışları
+- 🔄 **Birleşik Analiz**: Hava durumu + toprak analizi kombinasyonu
 
 ## 🚀 Kurulum
 
@@ -54,24 +55,30 @@ pip install -r requirements.txt
 GEMINI_API_KEY=your_api_key_here
 ```
 
-4. **Soil API'yi başlatın**
+4. **API'yi başlatın (Soil + Weather)**
 ```bash
-python -m uvicorn main:app --reload
+cd Backend/API
+python main.py
 ```
 
 ## 💻 Kullanım
 
 ### Temel Kullanım
 
-Ana scripti çalıştırın:
+Ana chatbot'u çalıştırın:
 ```bash
-python gps_llm_handler.py
+python main_chatbot.py
 ```
 
-Menüden seçim yapın:
-1. **Otomatik Konum Tespiti**: GPS/Wi-Fi ile otomatik koordinat belirleme
-2. **Manuel Koordinat Girişi**: Elle koordinat belirtme
-3. **Çıkış**: Programdan çıkış
+**Web Arayüzü**: http://localhost:8001
+**API Dokümantasyonu**: http://localhost:8001/docs
+
+### Chatbot Özellikleri
+
+- 🌤️ **Hava Durumu Sorguları**: "Hava durumu nasıl?", "3 günlük tahmin"
+- 🧪 **Toprak Analizi**: "Bu koordinattaki toprak nasıl?"
+- 🔄 **Birleşik Analiz**: "Hava durumu ve toprak analizi birlikte"
+- 📚 **Organik Tarım**: "Organik gübre nasıl yapılır?"
 
 ### Test Scripti
 
@@ -168,13 +175,14 @@ Toprak özelliklerini analiz eder.
 - Ürün uygunluk tespiti
 
 #### 4. Weather Tool
-Bölgesel hava durumu bilgisi sağlar.
+Gerçek hava durumu verilerini sağlar (Open-Meteo API).
 
-**Desteklenen Şehirler:**
-- İstanbul
-- Ankara
-- İzmir
-- Konya
+**Özellikler:**
+- Otomatik konum tespiti (IP tabanlı)
+- Manuel koordinat desteği
+- Günlük ve saatlik tahminler
+- Toprak sıcaklığı ve nem verileri
+- Evapotranspirasyon (ET0) değerleri
 
 ### 📍 GPS & LLM Handler
 
@@ -199,12 +207,11 @@ Ana uygulama modülü. Konum tespiti ve LLM entegrasyonunu yönetir.
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### Soil API Endpoint
+### API Endpoints
 
-`gps_llm_handler.py` içinde:
-```python
-api_url = "http://localhost:8000/soiltype/analyze"
-```
+**Soil API**: `http://localhost:8000/soiltype/`
+**Weather API**: `http://localhost:8000/weather/`
+**Chatbot API**: `http://localhost:8001/chat/`
 
 ### Tool Konfigürasyonu
 
@@ -213,8 +220,8 @@ Araçları özelleştirmek için:
 # RAG tool için maksimum yanıt uzunluğu
 rag_tool = RAGTool(rag_chatbot=chatbot, max_response_length=500)
 
-# Weather tool için API anahtarı
-weather_tool = WeatherTool(api_key="your_api_key")
+# Weather tool için API URL
+weather_tool = WeatherTool(api_base_url="http://localhost:8000")
 ```
 
 ## 🔬 Geliştirme
@@ -271,17 +278,18 @@ python gps_llm_handler.py
 
 ## 📝 Notlar
 
-- Soil API'nin çalışır durumda olması gereklidir
+- API'nin (Soil + Weather) çalışır durumda olması gereklidir
 - Windows Konum Servisi için sistem izinleri gerekebilir
 - IP tabanlı konum, GPS'e göre daha az hassastır
 - RAG sistemi için bilgi bankası yüklenmiş olmalıdır
+- Weather API gerçek veri sağlar (Open-Meteo)
 
 ## 🐛 Sorun Giderme
 
-### Soil API Bağlantı Hatası
+### API Bağlantı Hatası
 ```
-Çözüm: Soil API'nin çalıştığından emin olun
-python -m uvicorn main:app --reload
+Çözüm: API'nin çalıştığından emin olun
+cd Backend/API && python main.py
 ```
 
 ### Windows Konum Servisi Hatası
