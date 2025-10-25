@@ -328,6 +328,124 @@ async def chat_endpoint(request: ChatRequest):
             conversation_id=request.conversation_id
         )
 
+# Weather endpoint for frontend
+@app.post("/weather/")
+async def weather_endpoint(request: dict):
+    """Frontend'den gelen hava durumu isteklerini işle"""
+    try:
+        import httpx
+        
+        # Backend Weather API'ye otomatik konum ile istek gönder
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8000/weather/dailyweather/auto",
+                json={
+                    "method": "Auto"
+                },
+                params={"days": 1},
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list) and len(data) > 0:
+                    # İlk günün verilerini al
+                    daily_data = data[0]
+                    return {
+                        "temperature": daily_data.get('temperature_2m_mean'),
+                        "weather_code": daily_data.get('weather_code'),
+                        "rain_sum": daily_data.get('rain_sum'),
+                        "showers_sum": daily_data.get('showers_sum'),
+                        "snowfall_sum": daily_data.get('snowfall_sum'),
+                        "apparent_temperature_min": daily_data.get('apparent_temperature_min'),
+                        "apparent_temperature_mean": daily_data.get('apparent_temperature_mean'),
+                        "apparent_temperature_max": daily_data.get('apparent_temperature_max'),
+                        "precipitation_sum": daily_data.get('precipitation_sum'),
+                        "wind_speed_max": daily_data.get('wind_speed_10m_max'),
+                        "wind_gusts_max": daily_data.get('wind_gusts_10m_max'),
+                        "sunshine_duration": daily_data.get('sunshine_duration')
+                    }
+                else:
+                    return {"error": "Hava durumu verisi alınamadı"}
+            else:
+                return {"error": f"API Error: {response.status_code}"}
+        
+    except Exception as e:
+        print(f"❌ Weather endpoint hatası: {e}")
+        return {"error": f"Weather verisi alınamadı: {str(e)}"}
+
+# Soil endpoint for frontend
+@app.post("/soil/")
+async def soil_endpoint(request: dict):
+    """Frontend'den gelen toprak analizi isteklerini işle"""
+    try:
+        import httpx
+        
+        # Backend Soil API'ye otomatik konum ile istek gönder
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8000/soiltype/analyze/auto",
+                json={
+                    "method": "Auto"
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                soil_data = response.json()
+                
+                # Gerçek toprak analizi verilerini döndür
+                classification = soil_data.get('classification', {})
+                basic_props = soil_data.get('basic_properties', [])
+                texture_props = soil_data.get('texture_properties', [])
+                physical_props = soil_data.get('physical_properties', [])
+                chemical_props = soil_data.get('chemical_properties', [])
+                salinity_props = soil_data.get('salinity_properties', [])
+                
+                # Tüm özellikleri birleştir
+                all_properties = basic_props + texture_props + physical_props + chemical_props + salinity_props
+                
+                # Geçerli değerleri filtrele ve formatla
+                valid_properties = {}
+                for prop in all_properties:
+                    name = prop.get('name', '')
+                    value = prop.get('value')
+                    unit = prop.get('unit', '')
+                    
+                    # Null, -9, None değerleri filtrele
+                    if value is not None and value != -9 and value != -9.0 and str(value).lower() not in ['na', 'n/a', 'null']:
+                        # Sayısal değerleri 2 ondalık basamakla yuvarla
+                        if isinstance(value, (int, float)):
+                            formatted_value = f"{round(float(value), 2)}"
+                        else:
+                            formatted_value = str(value)
+                        
+                        # Birim varsa ekle
+                        if unit:
+                            valid_properties[name] = f"{formatted_value} {unit}"
+                        else:
+                            valid_properties[name] = formatted_value
+                
+                # Toprak tipi bilgileri
+                soil_type = classification.get('wrb4_description', 'Bilinmiyor')
+                soil_code = classification.get('wrb4_code', 'N/A')
+                
+                # Temel bilgileri ekle
+                result = {
+                    "soil_type": soil_type,
+                    "soil_code": soil_code,
+                    "description": f"Toprak ID: {soil_data.get('soil_id', 'N/A')}",
+                    **valid_properties  # Tüm geçerli özellikleri ekle
+                }
+                
+                return result
+            else:
+                return {"error": f"API Error: {response.status_code}"}
+        
+    except Exception as e:
+        print(f"❌ Soil endpoint hatası: {e}")
+        return {"error": f"Toprak analizi yapılamadı: {str(e)}"}
+
 # Root endpoint zaten yukarıda tanımlı - bu kısmı kaldırıyoruz
 
 
