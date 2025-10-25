@@ -1,5 +1,0 @@
-google-generativeai
-geopy 
-httpx
-python-dotenv
-winsdk
