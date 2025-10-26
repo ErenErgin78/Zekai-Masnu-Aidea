@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from SoilType import soil_api as soil_router
 from Weather import router as weather_router
+from MachineLearning import ml_api as ml_router
 import logging
 
 
@@ -35,6 +36,7 @@ app.add_middleware(
 # Router'ları ekle
 app.include_router(soil_router.router)
 app.include_router(weather_router.router)
+app.include_router(ml_router.router)
 
 # Ana endpoint'ler
 @app.get("/")
@@ -46,6 +48,8 @@ def root():
         "status": "running",
         "endpoints": {
             "soil_analysis": "/soiltype/",
+            "weather": "/weather/",
+            "machine_learning": "/ml/",
             "health": "/health",
             "docs": "/docs"
         }
