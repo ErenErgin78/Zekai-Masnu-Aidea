@@ -212,6 +212,17 @@ class AideaServiceManager:
             visualizer_module = importlib.util.module_from_spec(spec_visualizer)
             spec_visualizer.loader.exec_module(visualizer_module)
             
+            # ✅ YENİ: Crop Recommendation Tool
+            try:
+                crop_tool_path = os.path.join(PathConfig.TOOLS_DIR, "crop_recommendation_tool.py")
+                spec_crop = importlib.util.spec_from_file_location("crop_recommendation_tool", crop_tool_path)
+                crop_module = importlib.util.module_from_spec(spec_crop)
+                spec_crop.loader.exec_module(crop_module)
+                print("✅ Crop Recommendation Tool modülü yüklendi")
+            except Exception as e:
+                print(f"⚠️ Crop Recommendation Tool yüklenemedi: {e}")
+                crop_module = None
+            
             # RAG Tool - Import
             try:
                 rag_tool_path = os.path.join(PathConfig.TOOLS_DIR, "rag_tool.py")
@@ -299,6 +310,15 @@ class AideaServiceManager:
                 'module': None,
                 'class': SoilAnalyzerTool
             }
+            
+            # ✅ YENİ: Crop Recommendation Tool ekle
+            if crop_module:
+                self.tools["crop_recommendation_tool"] = {
+                    'instance': crop_module.CropRecommendationTool(),
+                    'module': crop_module,
+                    'class': crop_module.CropRecommendationTool
+                }
+                print("✅ Crop Recommendation Tool eklendi")
             
             # RAG Tool'u ekle (eğer yüklendiyse)
             if rag_tool_module:

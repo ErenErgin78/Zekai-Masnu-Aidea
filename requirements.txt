@@ -42,6 +42,7 @@ geopandas>=0.14.0
 fastapi>=0.104.1
 uvicorn>=0.24.0
 python-multipart>=0.0.6
+xgboost
 
 # ===================================
 # HTTP & NETWORKING

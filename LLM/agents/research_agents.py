@@ -54,6 +54,19 @@ except ImportError as e:
         def __call__(self, city): 
             return "Hava durumu mevcut değil"
 
+# ✅ YENİ: Crop Recommendation Tool entegrasyonu
+try:
+    from crop_recommendation_tool import CropRecommendationTool
+    print("✅ Crop Recommendation Tool yüklendi")
+except ImportError as e:
+    print(f"❌ Crop Recommendation Tool yüklenemedi: {e}")
+    # Fallback class
+    class CropRecommendationTool:
+        def __init__(self): 
+            self.name = "Crop Recommendation Tool"
+        def recommend_crop(self, nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall):
+            return "Mahsul öneri sistemi mevcut değil"
+
 class ResearchAgent:
     def __init__(self, tools: list = None, verbose: bool = True):
         self.name = "Soil Research Agent"
@@ -71,7 +84,8 @@ class ResearchAgent:
                 WeatherTool(),
                 DataVisualizerTool(),
                 SoilAnalyzerTool(),
-                RAGTool()
+                RAGTool(),
+                CropRecommendationTool()  # ✅ YENİ: Crop Recommendation Tool eklendi
             ]
             print(f"✅ Research Agent kendi tool'larıyla başlatıldı: {len(self.tools)} tool")
     
@@ -127,6 +141,23 @@ class ResearchAgent:
                         research_result["tools_used"].append("Data Visualizer Tool")
                     except Exception as e:
                         print(f"❌ Data visualizer hatası: {e}")
+            
+            # ✅ YENİ: Crop Recommendation Tool - sorguda mahsul önerisi varsa
+            crop_tool = next((tool for tool in self.tools if "Crop Recommendation" in tool.name), None)
+            if crop_tool:
+                crop_params = self._extract_crop_parameters(query)
+                if crop_params:
+                    try:
+                        crop_result = crop_tool.recommend_crop(**crop_params)
+                        research_result["findings"].append({
+                            "tool": crop_tool.name,
+                            "data": crop_result,
+                            "type": "crop_recommendation"
+                        })
+                        research_result["tools_used"].append(crop_tool.name)
+                        print(f"✅ Mahsul önerisi alındı")
+                    except Exception as e:
+                        print(f"❌ Crop recommendation hatası: {e}")
             
             # ✅ RAG Tool - HER ZAMAN çalışsın (sorguya dayalı bilgi)
             rag_tool = next((tool for tool in self.tools if "RAG" in tool.name), None)
@@ -191,6 +222,45 @@ class ResearchAgent:
             import traceback
             traceback.print_exc()
             return error_result
+    
+    def _extract_crop_parameters(self, query: str) -> Dict:
+        """Sorgudan mahsul önerisi parametrelerini çıkar"""
+        # Basit bir keyword matching - gerçek uygulamada daha gelişmiş NLP kullanılabilir
+        import re
+        
+        # Sayıları çıkarmak için regex
+        numbers = re.findall(r'\d+\.?\d*', query)
+        
+        # Eğer 7 sayı varsa (N, P, K, temp, humidity, ph, rainfall)
+        if len(numbers) >= 7:
+            try:
+                return {
+                    "nitrogen": float(numbers[0]),
+                    "phosphorus": float(numbers[1]),
+                    "potassium": float(numbers[2]),
+                    "temperature": float(numbers[3]),
+                    "humidity": float(numbers[4]),
+                    "ph": float(numbers[5]),
+                    "rainfall": float(numbers[6])
+                }
+            except (ValueError, IndexError):
+                pass
+        
+        # Eğer sorguda mahsul önerisi anahtar kelimeleri varsa
+        crop_keywords = ["mahsul öner", "ne ek", "hangi ürün", "crop recommend", "ne yetiş", "uygun mahsul"]
+        if any(keyword in query.lower() for keyword in crop_keywords):
+            # Varsayılan değerlerle dön (kullanıcıya sorabilirsiniz)
+            return {
+                "nitrogen": 90,
+                "phosphorus": 42,
+                "potassium": 43,
+                "temperature": 25,
+                "humidity": 70,
+                "ph": 6.5,
+                "rainfall": 150
+            }
+        
+        return None
     
     def _extract_city_from_query(self, query: str) -> str:
         """Query'den şehir adını çıkar"""
@@ -276,6 +346,20 @@ class ResearchAgent:
                 if "kompost kullanın" in data or "organik" in data.lower():
                     recommendations.append("Organik karbon seviyesini artırmak için kompost kullanın")
             
+            elif finding["type"] == "crop_recommendation":
+                # Mahsul önerisi sonuçlarından öneriler
+                if hasattr(data, 'recommended_crop'):
+                    recommendations.append(f"Önerilen mahsul: {data.recommended_crop}")
+                if hasattr(data, 'alternative_crops') and data.alternative_crops:
+                    recommendations.append(f"Alternatif mahsuller: {', '.join(data.alternative_crops[:3])}")
+                if hasattr(data, 'explanation'):
+                    # Açıklamadan önemli noktaları çıkar
+                    explanation = data.explanation
+                    if "pH" in explanation:
+                        recommendations.append("Toprak pH değerini optimum seviyede tutun")
+                    if "yağış" in explanation.lower():
+                        recommendations.append("Yağış durumuna göre sulama programı ayarlayın")
+            
             elif finding["type"] == "fallback_knowledge":
                 if "domates" in research_result["query"].lower():
                     recommendations.extend([
@@ -346,7 +430,15 @@ class ResearchAgent:
                     tool_name = finding["tool"]
                     data = finding["data"]
                     
-                    if finding["type"] == "fallback_knowledge":
+                    if finding["type"] == "crop_recommendation":  # ✅ YENİ: Crop recommendation formatı
+                        response += f"   {i}. {tool_name}:\n"
+                        response += f"      - Önerilen Mahsul: {data.recommended_crop}\n"
+                        response += f"      - Güven Seviyesi: {data.confidence}\n"
+                        response += f"      - Açıklama: {data.explanation}\n"
+                        if hasattr(data, 'alternative_crops') and data.alternative_crops:
+                            response += f"      - Alternatifler: {', '.join(data.alternative_crops[:3])}\n"
+                    
+                    elif finding["type"] == "fallback_knowledge":
                         response += f"   {i}. {tool_name}:\n"
                         response += f"      - {data.get('title', '')}\n"
                         response += f"      - Toprak: {data.get('soil_requirements', 'Bilinmiyor')}\n"
