@@ -310,15 +310,14 @@ def main():
 
     eval_df = pd.DataFrame(eval_rows).sort_values("Test_F1", ascending=False)
 
-    # 8) Save artifacts
+    # 8) Save artifacts - SADECE model ve sonuçlar
     outputs = Path("model_outputs"); outputs.mkdir(exist_ok=True, parents=True)
     ts = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
     cv_df.to_csv(outputs / "cv_results.csv", index=False)
     eval_df.to_csv(outputs / "test_results.csv", index=False)
 
+    # SADECE model kaydediliyor, scaler ve label encoder KALDIRILDI
     joblib.dump(best["model"], outputs / f"best_model_{best['name'].replace(' ', '_')}_{ts}.pkl")
-    joblib.dump(scaler, outputs / f"scaler_{ts}.pkl")
-    joblib.dump(le, outputs / f"label_encoder_{ts}.pkl")
 
     with open(outputs / f"best_params_{ts}.json", "w", encoding="utf-8") as f:
         json.dump(best_params_log, f, ensure_ascii=False, indent=2)
@@ -329,6 +328,8 @@ def main():
         "test_top": eval_df.head(5).to_dict(orient="records"),
         "best_model": best["name"],
         "best_f1": float(best["f1"]),
+        "feature_names": X.columns.tolist(),
+        "label_classes": le.classes_.tolist()
     }
     with open(outputs / f"summary_{ts}.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
@@ -470,6 +471,8 @@ def main():
     print(f"Veri Boyutu: {df.shape}")
     print(f"Çıktı Klasörü: {outputs.resolve()}")
     print("="*50)
+    print("💡 NOT: Scaler ve LabelEncoder kaydedilmedi")
+    print("Özellik isimleri ve sınıf etiketleri summary.json'da mevcut")
 
 if __name__ == "__main__":
     main()

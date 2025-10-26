@@ -1,0 +1,118 @@
+{
+  "data_note": "Loaded: C:\\Users\\HUSOCAN\\Desktop\\Projelerim\\Zekai-Masnu-Aidea\\Backend\\API\\MachineLearning\\Code\\Data\\Crop_recommendation_cleaned.csv",
+  "cv_top": [
+    {
+      "Model": "LightGBM",
+      "CV_F1_mean": 0.9800511824297835,
+      "CV_F1_std": 0.007733138966161525,
+      "CV_Scores": [
+        0.9886335865991291,
+        0.9801741757753489,
+        0.9829072051374536,
+        0.9656002843686128,
+        0.9829406602683729
+      ]
+    },
+    {
+      "Model": "XGBoost",
+      "CV_F1_mean": 0.9777267369224416,
+      "CV_F1_std": 0.0033675694248625192,
+      "CV_Scores": [
+        0.9828573491513374,
+        0.9740107539950131,
+        0.9744404433327584,
+        0.9772448915583296,
+        0.9800802465747694
+      ]
+    },
+    {
+      "Model": "Random Forest",
+      "CV_F1_mean": 0.9696715815520875,
+      "CV_F1_std": 0.011622008554668153,
+      "CV_Scores": [
+        0.9829072051374536,
+        0.9687865262073904,
+        0.9567106319111667,
+        0.9571078589094746,
+        0.9828456855949526
+      ]
+    },
+    {
+      "Model": "Logistic Regression",
+      "CV_F1_mean": 0.5419598688728511,
+      "CV_F1_std": 0.010177513602385965,
+      "CV_Scores": [
+        0.5325927238086827,
+        0.5472722385521119,
+        0.5320203955522893,
+        0.5590869391550077,
+        0.5388270472961634
+      ]
+    }
+  ],
+  "test_top": [
+    {
+      "Model": "XGBoost",
+      "Test_Accuracy": 0.9795454545454545,
+      "Test_F1": 0.9796266313917148,
+      "Test_Precision": 0.9809031877213695,
+      "Test_Recall": 0.9795454545454545
+    },
+    {
+      "Model": "LightGBM",
+      "Test_Accuracy": 0.975,
+      "Test_F1": 0.9750397762271962,
+      "Test_Precision": 0.9758461235733964,
+      "Test_Recall": 0.975
+    },
+    {
+      "Model": "Random Forest",
+      "Test_Accuracy": 0.975,
+      "Test_F1": 0.9749218047677611,
+      "Test_Precision": 0.9757151142318607,
+      "Test_Recall": 0.975
+    },
+    {
+      "Model": "Logistic Regression",
+      "Test_Accuracy": 0.5613636363636364,
+      "Test_F1": 0.5358880413799758,
+      "Test_Precision": 0.5907731278160969,
+      "Test_Recall": 0.5613636363636364
+    }
+  ],
+  "best_model": "XGBoost",
+  "best_f1": 0.9796266313917148,
+  "feature_names": [
+    "n",
+    "p",
+    "k",
+    "temperature",
+    "humidity",
+    "ph",
+    "rainfall"
+  ],
+  "label_classes": [
+    "apple",
+    "banana",
+    "blackgram",
+    "chickpea",
+    "coconut",
+    "coffee",
+    "cotton",
+    "grapes",
+    "jute",
+    "kidneybeans",
+    "lentil",
+    "maize",
+    "mango",
+    "mothbeans",
+    "mungbean",
+    "muskmelon",
+    "orange",
+    "papaya",
+    "pigeonpeas",
+    "pomegranate",
+    "rice",
+    "watermelon"
+  ]
+}
