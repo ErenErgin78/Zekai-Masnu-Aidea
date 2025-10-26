@@ -1,0 +1,297 @@
+================================================================================
+BINARY RELEVANCE MULTI-LABEL CLASSIFICATION RAPORU
+================================================================================
+Rapor Tarihi: 2025-10-26 22:04:09
+Toplam Ürün Sayısı: 38
+
+MODEL KARŞILAŞTIRMASI
+----------------------------------------
+1. RandomForest
+   Accuracy: 0.9712
+   F1-Micro: 0.9835
+   F1-Macro: 0.9487
+   Hamming Loss: 0.0026
+   Jaccard Score: 0.9310
+
+2. XGBoost
+   Accuracy: 0.9681
+   F1-Micro: 0.9835
+   F1-Macro: 0.9486
+   Hamming Loss: 0.0026
+   Jaccard Score: 0.9308
+
+3. DecisionTree
+   Accuracy: 0.9649
+   F1-Micro: 0.9824
+   F1-Macro: 0.9479
+   Hamming Loss: 0.0028
+   Jaccard Score: 0.9296
+
+4. GradientBoosting
+   Accuracy: 0.9681
+   F1-Micro: 0.9824
+   F1-Macro: 0.9439
+   Hamming Loss: 0.0028
+   Jaccard Score: 0.9259
+
+5. ExtraTrees
+   Accuracy: 0.9649
+   F1-Micro: 0.9808
+   F1-Macro: 0.9428
+   Hamming Loss: 0.0030
+   Jaccard Score: 0.9203
+
+6. SVM
+   Accuracy: 0.9489
+   F1-Micro: 0.9776
+   F1-Macro: 0.9380
+   Hamming Loss: 0.0035
+   Jaccard Score: 0.9153
+
+7. LogisticRegression
+   Accuracy: 0.8019
+   F1-Micro: 0.9420
+   F1-Macro: 0.9286
+   Hamming Loss: 0.0092
+   Jaccard Score: 0.8950
+
+8. KNN
+   Accuracy: 0.9489
+   F1-Micro: 0.9643
+   F1-Macro: 0.8969
+   Hamming Loss: 0.0056
+   Jaccard Score: 0.8571
+
+ÜRÜN BAZLI PERFORMANS
+----------------------------------------
+Arpa:
+   Precision: 0.9732
+   Recall: 0.9909
+   F1-Score: 0.9820
+   True Positives: 109
+
+Ayçiçeği:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+
+Badem:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 5
+
+Biber:
+   Precision: 1.0000
+   Recall: 0.9259
+   F1-Score: 0.9615
+   True Positives: 25
+
+Buğday:
+   Precision: 0.9950
+   Recall: 0.9851
+   F1-Score: 0.9900
+   True Positives: 199
+
+Ceviz:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+
+Domates:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 40
+
+Elma:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 25
+
+Fasulye:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 9
+
+Fındık:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 20
+
+Fıstık:
+   Precision: 0.6667
+   Recall: 1.0000
+   F1-Score: 0.8000
+   True Positives: 2
+
+Gül:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 1
+
+Haşhaş:
+   Precision: 1.0000
+   Recall: 0.8000
+   F1-Score: 0.8889
+   True Positives: 4
+
+Kayısı:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 17
+
+Kiraz:
+   Precision: 0.9167
+   Recall: 1.0000
+   F1-Score: 0.9565
+   True Positives: 11
+
+Kivi:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+
+Mercimek:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+
+Muz:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 1
+
+Mısır:
+   Precision: 0.9706
+   Recall: 0.9429
+   F1-Score: 0.9565
+   True Positives: 33
+
+Narenciye:
+   Precision: 0.8750
+   Recall: 1.0000
+   F1-Score: 0.9333
+   True Positives: 14
+
+Nohut:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+
+Pamuk:
+   Precision: 1.0000
+   Recall: 0.9623
+   F1-Score: 0.9808
+   True Positives: 51
+
+Patates:
+   Precision: 1.0000
+   Recall: 0.9583
+   F1-Score: 0.9787
+   True Positives: 69
+
+Patlıcan:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 14
+
+Pirinç:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 6
+
+Sarımsak:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 5
+
+Sebze:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+
+Turunçgiller:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+
+Tütün:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 10
+
+Yer Fıstığı:
+   Precision: 0.0000
+   Recall: 0.0000
+   F1-Score: 0.0000
+   True Positives: 0
+
+Zeytin:
+   Precision: 0.9818
+   Recall: 1.0000
+   F1-Score: 0.9908
+   True Positives: 54
+
+Çay:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+
+Çilek:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 3
+
+Üzüm:
+   Precision: 0.9750
+   Recall: 1.0000
+   F1-Score: 0.9873
+   True Positives: 39
+
+İncir:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 1
+
+Şeftali:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+
+Şeker Pancarı:
+   Precision: 0.9765
+   Recall: 0.9765
+   F1-Score: 0.9765
+   True Positives: 83
+
+Şerbetçi Otu:
+   Precision: 0.5000
+   Recall: 1.0000
+   F1-Score: 0.6667
+   True Positives: 1
+
+================================================================================
+RAPOR SONU
+================================================================================
