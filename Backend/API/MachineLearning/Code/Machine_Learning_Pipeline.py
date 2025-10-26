@@ -1,562 +1,475 @@
 # ============================================================
-# 🌲 Random Forest — Crop Recommendation Model (Enhanced)
+# 🌿 Crop Recommendation — Multi-Model + Cross-Validation + Optuna (Final, Cleaned)
+# ============================================================
+# Prefers: Crop_recommendation_cleaned.csv
+# Fallbacks: Crop_recommendation.csv (auto-clean if needed) or user path
+# Models: Logistic Regression, Random Forest, LightGBM, XGBoost, CatBoost (if available)
+# Selection: Best Test F1 (after 5-fold CV reporting)
+# Artifacts: model_outputs/{cv_results.csv, test_results.csv, *.pkl, summary.json}
 # ============================================================
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import joblib
 import os
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, StratifiedKFold
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score, f1_score, precision_score, recall_score, 
-    classification_report, confusion_matrix
-)
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
+import json
+import time
+import joblib
 import warnings
-warnings.filterwarnings('ignore')
+import numpy as np
+import pandas as pd
+from pathlib import Path
 
-# ---------- 1. Dinamik Veri Yükleme ----------
-def find_data_file(filename):
-    """Veri dosyasını dinamik olarak bulur"""
-    # Mevcut dizin ve alt dizinlerde ara
-    for root, dirs, files in os.walk('.'):
-        if filename in files:
-            return os.path.join(root, filename)
-    
-    # Bir üst dizinleri de kontrol et
-    parent_dirs = [
-        '..',
-        '../Data',
-        '../data',
-        '../../Data',
-        '../../data',
-        'C:/Users/HUSOCAN/Desktop/Projelerim/Zekai-Masnu-Aidea/Backend/API/MachineLearning/Data'
-    ]
-    
-    for parent_dir in parent_dirs:
-        potential_path = os.path.join(parent_dir, filename)
-        if os.path.exists(potential_path):
-            return potential_path
-    
-    raise FileNotFoundError(f"'{filename}' dosyası bulunamadı. Lütfen dosya yolunu kontrol edin.")
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
-# Veri dosyasını bul ve yükle
-try:
-    DATA_FILE = "Crop_recommendation_cleaned.csv"
-    FILE_PATH = find_data_file(DATA_FILE)
-    print(f"✅ Dosya bulundu: {FILE_PATH}")
-    
-    df = pd.read_csv(FILE_PATH)
-    print("✅ Veri yüklendi:", df.shape)
-    print("🧾 Sütunlar:", df.columns.tolist())
-    print("🌱 Eşsiz ürünler:", df['label'].nunique())
-    print(df['label'].value_counts().head())
+warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=UserWarning, module="lightgbm")
 
-except FileNotFoundError as e:
-    print(f"❌ Hata: {e}")
-    # Alternatif olarak kullanıcıdan dosya yolu iste
-    FILE_PATH = input("Lütfen veri dosyasının tam yolunu girin: ")
-    df = pd.read_csv(FILE_PATH)
+RANDOM_STATE = 42
 
-# ---------- 2. Sayısal dönüşüm kontrolü ----------
-numeric_cols = df.columns.drop('label')
-
-for col in numeric_cols:
-    df[col] = (
-        df[col]
-        .astype(str)
-        .str.replace('.', '', regex=False)
-        .str.replace(',', '.', regex=False)
-    )
-    df[col] = pd.to_numeric(df[col], errors='coerce')
-
-print("\n📊 Veri tipleri (dönüşüm sonrası):")
-print(df.dtypes)
-
-# ---------- 3. X / y Ayırma ve Encoding ----------
-X = df.drop(columns=['label'])
-y = df['label']
-
-# Label encoding for better visualization
-le = LabelEncoder()
-y_encoded = le.fit_transform(y)
-
-print(f"🔤 Label Encoding uygulandı:")
-for i, class_name in enumerate(le.classes_):
-    print(f"   {class_name} -> {i}")
-
-# ---------- 4. Train-Test Split ----------
-X_train, X_test, y_train, y_test, y_train_encoded, y_test_encoded = train_test_split(
-    X, y, y_encoded, test_size=0.2, random_state=42, stratify=y
-)
-print(f"📊 Train: {X_train.shape}, Test: {X_test.shape}")
-print(f"🔤 y_train unique: {np.unique(y_train)}")
-print(f"🔢 y_train_encoded unique: {np.unique(y_train_encoded)}")
-
-# ---------- 5. Scaling ----------
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-print("✅ Scaling uygulandı")
-
-# ---------- 6. Çoklu Model Tanımlama ----------
-def get_models():
-    """Farklı sınıflandırma modellerini döndürür"""
-    models = {
-        'Random Forest': RandomForestClassifier(random_state=42, n_jobs=-1),
-        'Decision Tree': DecisionTreeClassifier(random_state=42),
-        'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000, multi_class='ovr'),
-        'SVM': SVC(random_state=42, probability=True),
-        'K-Nearest Neighbors': KNeighborsClassifier(n_jobs=-1)
-    }
-    return models
-
-# ---------- 7. Hiperparametre Grid'leri ----------
-def get_param_grids():
-    """Her model için hiperparametre grid'lerini döndürür"""
-    param_grids = {
-        'Random Forest': {
-            'n_estimators': [100, 200],
-            'max_depth': [10, 20, None],
-            'min_samples_split': [2, 5],
-            'min_samples_leaf': [1, 2]
-        },
-        'Decision Tree': {
-            'max_depth': [10, 20, None],
-            'min_samples_split': [2, 5],
-            'min_samples_leaf': [1, 2],
-            'criterion': ['gini', 'entropy']
-        },
-        'Logistic Regression': {
-            'C': [0.1, 1, 10],
-            'solver': ['liblinear', 'saga']
-        },
-        'SVM': {
-            'C': [0.1, 1, 10],
-            'kernel': ['linear', 'rbf']
-        },
-        'K-Nearest Neighbors': {
-            'n_neighbors': [3, 5, 7],
-            'weights': ['uniform', 'distance']
-        }
-    }
-    return param_grids
-
-# ---------- 8. Cross Validation Fonksiyonu ----------
-def perform_cross_validation(models, X_train, X_train_scaled, y_train_encoded, cv=5):
-    """Her model için cross validation skorlarını hesaplar"""
-    cv_results = {}
-    cv = StratifiedKFold(n_splits=cv, shuffle=True, random_state=42)
-    
-    for name, model in models.items():
-        print(f"🔍 {name} için Cross Validation yapılıyor...")
-        
-        # Scaling gerektiren modeller için kontrol
-        if name in ['Logistic Regression', 'SVM', 'K-Nearest Neighbors']:
-            X_data = X_train_scaled
-        else:
-            X_data = X_train
-            
-        cv_scores = cross_val_score(model, X_data, y_train_encoded, cv=cv, scoring='accuracy', n_jobs=-1)
-        cv_results[name] = {
-            'mean_score': cv_scores.mean(),
-            'std_score': cv_scores.std(),
-            'all_scores': cv_scores
-        }
-        print(f"   {name} CV Accuracy: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
-    
-    return cv_results
-
-# ---------- 9. Hiperparametre Optimizasyonu ----------
-def perform_hyperparameter_tuning(models, param_grids, X_train, X_train_scaled, y_train_encoded):
-    """Her model için GridSearchCV ile hiperparametre optimizasyonu"""
-    best_models = {}
-    tuning_results = {}
-    
-    for name, model in models.items():
-        print(f"\n🎯 {name} için Hiperparametre Optimizasyonu...")
-        
-        if name not in param_grids:
-            print(f"   ⚠ {name} için parametre grid tanımlı değil, normal eğitim yapılıyor...")
-            if name in ['Logistic Regression', 'SVM', 'K-Nearest Neighbors']:
-                model.fit(X_train_scaled, y_train_encoded)
-            else:
-                model.fit(X_train, y_train_encoded)
-            best_models[name] = model
-            tuning_results[name] = {'best_score': None, 'best_params': 'No optimization'}
-            continue
-        
-        # Scaling gerektiren modeller için kontrol
-        if name in ['Logistic Regression', 'SVM', 'K-Nearest Neighbors']:
-            X_data = X_train_scaled
-        else:
-            X_data = X_train
-            
-        grid_search = GridSearchCV(
-            estimator=model,
-            param_grid=param_grids[name],
-            cv=3,  # Daha hızlı olması için 3 fold
-            scoring='accuracy',
-            n_jobs=-1,
-            verbose=1
-        )
-        
-        grid_search.fit(X_data, y_train_encoded)
-        
-        best_models[name] = grid_search.best_estimator_
-        tuning_results[name] = {
-            'best_score': grid_search.best_score_,
-            'best_params': grid_search.best_params_
-        }
-        
-        print(f"   ✅ En iyi parametreler: {grid_search.best_params_}")
-        print(f"   🏆 En iyi CV skoru: {grid_search.best_score_:.4f}")
-    
-    return best_models, tuning_results
-
-# ---------- 10. Model Değerlendirme ----------
-def evaluate_models(best_models, X_test, X_test_scaled, y_test_encoded, le):
-    """Optimize edilmiş modelleri test setinde değerlendirir"""
-    evaluation_results = {}
-    
-    for name, model in best_models.items():
-        print(f"\n📊 {name} Değerlendiriliyor...")
-        
-        # Scaling gerektiren modeller için kontrol
-        if name in ['Logistic Regression', 'SVM', 'K-Nearest Neighbors']:
-            X_test_data = X_test_scaled
-        else:
-            X_test_data = X_test
-        
-        y_pred_encoded = model.predict(X_test_data)
-        y_pred_original = le.inverse_transform(y_pred_encoded)
-        
-        # Tüm metrikleri encoded değerlerle hesapla
-        accuracy = accuracy_score(y_test_encoded, y_pred_encoded)
-        f1 = f1_score(y_test_encoded, y_pred_encoded, average='weighted')
-        precision = precision_score(y_test_encoded, y_pred_encoded, average='weighted')
-        recall = recall_score(y_test_encoded, y_pred_encoded, average='weighted')
-        
-        evaluation_results[name] = {
-            'accuracy': accuracy,
-            'f1_score': f1,
-            'precision': precision,
-            'recall': recall,
-            'predictions_encoded': y_pred_encoded,
-            'predictions_original': y_pred_original,
-            'probabilities': model.predict_proba(X_test_data) if hasattr(model, 'predict_proba') else None
-        }
-        
-        print(f"   ✅ Test Accuracy: {accuracy:.4f}")
-        print(f"   🎯 Test F1-Score: {f1:.4f}")
-        print(f"   📍 Test Precision: {precision:.4f}")
-        print(f"   🔄 Test Recall: {recall:.4f}")
-    
-    return evaluation_results
-
-# ---------- 11. İyileştirilmiş Model Karşılaştırma Görselleştirme ----------
-def plot_model_comparison(evaluation_results, cv_results):
-    """Modellerin performanslarını karşılaştıran düzenlenmiş grafikler oluşturur"""
-    models = list(evaluation_results.keys())
-    
-    # Metrikleri hazırla
-    test_accuracies = [evaluation_results[m]['accuracy'] for m in models]
-    test_f1_scores = [evaluation_results[m]['f1_score'] for m in models]
-    cv_accuracies = [cv_results[m]['mean_score'] for m in models]
-    
-    # DataFrame oluştur
-    comparison_df = pd.DataFrame({
-        'Model': models,
-        'Test_Accuracy': test_accuracies,
-        'Test_F1_Score': test_f1_scores,
-        'CV_Accuracy': cv_accuracies
-    }).sort_values('Test_Accuracy', ascending=False)
-    
-    print("\n" + "="*70)
-    print("🏆 MODEL PERFORMANS KARŞILAŞTIRMASI")
-    print("="*70)
-    print(comparison_df.round(4))
-    
-    # Grafikleri ayrı ayrı çiz - daha düzenli görünüm için
-    plt.style.use('default')  # Varsayılan stili kullan
-    
-    # 1. Test Accuracy Karşılaştırması
-    plt.figure(figsize=(12, 6))
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#3B1F2B']
-    
-    bars = plt.barh(comparison_df['Model'], comparison_df['Test_Accuracy'], 
-                    color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    
-    # Değerleri çubukların üzerine yaz
-    for i, (bar, acc) in enumerate(zip(bars, comparison_df['Test_Accuracy'])):
-        plt.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2, 
-                f'{acc:.3f}', ha='left', va='center', fontweight='bold')
-    
-    plt.title('Model Test Accuracy Karşılaştırması\n(En İyiden En Kötüye)', 
-              fontsize=16, fontweight='bold', pad=20)
-    plt.xlabel('Accuracy', fontsize=12)
-    plt.xlim(0, 1.1)
-    plt.grid(axis='x', alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-    
-    # 2. Test vs CV Accuracy Karşılaştırması
-    plt.figure(figsize=(12, 6))
-    x = np.arange(len(models))
-    width = 0.35
-    
-    bars1 = plt.bar(x - width/2, comparison_df['Test_Accuracy'], width, 
-                   label='Test Accuracy', alpha=0.7, color='skyblue', edgecolor='black')
-    bars2 = plt.bar(x + width/2, comparison_df['CV_Accuracy'], width, 
-                   label='CV Accuracy', alpha=0.7, color='lightcoral', edgecolor='black')
-    
-    # Değerleri çubukların üzerine yaz
-    for bars in [bars1, bars2]:
-        for bar in bars:
-            height = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                    f'{height:.3f}', ha='center', va='bottom', fontsize=9)
-    
-    plt.title('Test vs Cross-Validation Accuracy Karşılaştırması', 
-              fontsize=16, fontweight='bold', pad=20)
-    plt.xlabel('Modeller', fontsize=12)
-    plt.ylabel('Accuracy', fontsize=12)
-    plt.xticks(x, models, rotation=45, ha='right')
-    plt.legend()
-    plt.grid(axis='y', alpha=0.3)
-    plt.ylim(0, 1.1)
-    plt.tight_layout()
-    plt.show()
-    
-    # 3. F1-Score Karşılaştırması
-    plt.figure(figsize=(12, 6))
-    bars = plt.bar(comparison_df['Model'], comparison_df['Test_F1_Score'], 
-                  color='lightgreen', alpha=0.7, edgecolor='black')
-    
-    # Değerleri çubukların üzerine yaz
-    for bar, f1_score in zip(bars, comparison_df['Test_F1_Score']):
-        plt.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.01,
-                f'{f1_score:.3f}', ha='center', va='bottom', fontweight='bold')
-    
-    plt.title('Model Test F1-Score Karşılaştırması\n(Weighted)', 
-              fontsize=16, fontweight='bold', pad=20)
-    plt.xlabel('Modeller', fontsize=12)
-    plt.ylabel('F1-Score', fontsize=12)
-    plt.xticks(rotation=45, ha='right')
-    plt.grid(axis='y', alpha=0.3)
-    plt.ylim(0, 1.1)
-    plt.tight_layout()
-    plt.show()
-    
-    # 4. Precision-Recall Karşılaştırması
-    plt.figure(figsize=(12, 6))
-    precision_vals = [evaluation_results[m]['precision'] for m in models]
-    recall_vals = [evaluation_results[m]['recall'] for m in models]
-    
-    x = np.arange(len(models))
-    width = 0.35
-    
-    bars1 = plt.bar(x - width/2, precision_vals, width, 
-                   label='Precision', alpha=0.7, color='orange', edgecolor='black')
-    bars2 = plt.bar(x + width/2, recall_vals, width, 
-                   label='Recall', alpha=0.7, color='purple', edgecolor='black')
-    
-    # Değerleri çubukların üzerine yaz
-    for bars in [bars1, bars2]:
-        for bar in bars:
-            height = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                    f'{height:.3f}', ha='center', va='bottom', fontsize=9)
-    
-    plt.title('Precision vs Recall Karşılaştırması\n(Weighted)', 
-              fontsize=16, fontweight='bold', pad=20)
-    plt.xlabel('Modeller', fontsize=12)
-    plt.ylabel('Score', fontsize=12)
-    plt.xticks(x, models, rotation=45, ha='right')
-    plt.legend()
-    plt.grid(axis='y', alpha=0.3)
-    plt.ylim(0, 1.1)
-    plt.tight_layout()
-    plt.show()
-    
-    return comparison_df
-
-# ---------- 12. En İyi Model Detaylı Analiz ----------
-def detailed_best_model_analysis(best_model, best_model_name, X_test, X_test_scaled, y_test_encoded, le):
-    """En iyi model için detaylı analiz yapar"""
-    print(f"\n⭐ EN İYİ MODEL DETAYLI ANALİZ: {best_model_name}")
-    print("="*60)
-    
-    # Doğru veri setini seç
-    if best_model_name in ['Logistic Regression', 'SVM', 'K-Nearest Neighbors']:
-        X_test_data = X_test_scaled
-    else:
-        X_test_data = X_test
-    
-    # Tahminler
-    y_pred_encoded = best_model.predict(X_test_data)
-    y_pred_original = le.inverse_transform(y_pred_encoded)
-    y_test_original = le.inverse_transform(y_test_encoded)
-    
-    # Detaylı metrikler
-    accuracy = accuracy_score(y_test_encoded, y_pred_encoded)
-    f1 = f1_score(y_test_encoded, y_pred_encoded, average='weighted')
-    precision = precision_score(y_test_encoded, y_pred_encoded, average='weighted')
-    recall = recall_score(y_test_encoded, y_pred_encoded, average='weighted')
-    
-    print(f"📊 Test Accuracy: {accuracy:.4f}")
-    print(f"🎯 Test F1-Score: {f1:.4f}")
-    print(f"📍 Test Precision: {precision:.4f}")
-    print(f"🔁 Test Recall: {recall:.4f}")
-    
-    # Classification Report
-    print("\n📋 DETAYLI CLASSIFICATION REPORT:")
-    print(classification_report(y_test_original, y_pred_original))
-    
-    # Confusion Matrix
-    plt.figure(figsize=(12, 10))
-    cm = confusion_matrix(y_test_original, y_pred_original)
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=le.classes_, 
-                yticklabels=le.classes_)
-    plt.title(f'Confusion Matrix - {best_model_name}\n', fontsize=16, fontweight='bold')
-    plt.xlabel('Tahmin Edilen Ürün')
-    plt.ylabel('Gerçek Ürün')
-    plt.xticks(rotation=45, ha='right')
-    plt.yticks(rotation=0)
-    plt.tight_layout()
-    plt.show()
-    
-    return y_pred_original
-
-# ---------- 13. Feature Importance Görselleştirme ----------
-def plot_feature_importance(best_model, best_model_name, feature_names):
-    """En iyi model için feature importance grafiği çizer"""
-    if hasattr(best_model, 'feature_importances_'):
-        plt.figure(figsize=(10, 8))
-        importances = best_model.feature_importances_
-        indices = np.argsort(importances)[::-1]
-        
-        # Feature importance DataFrame
-        feature_importance_df = pd.DataFrame({
-            'feature': feature_names[indices],
-            'importance': importances[indices]
-        })
-        
-        # Grafik
-        plt.barh(range(len(importances)), importances[indices], color='green', alpha=0.7)
-        plt.yticks(range(len(importances)), feature_names[indices])
-        plt.title(f'{best_model_name} - Feature Importance\n', fontsize=16, fontweight='bold')
-        plt.xlabel('Importance Score')
-        plt.gca().invert_yaxis()
-        plt.grid(axis='x', alpha=0.3)
-        plt.tight_layout()
-        plt.show()
-        
-        print("\n🔍 EN ÖNEMLİ 10 FEATURE:")
-        print(feature_importance_df.head(10).round(4))
-        
-        return feature_importance_df
-    else:
-        print(f"⚠ {best_model_name} modeli feature_importance_ attribute'una sahip değil")
+# ---------- Optional imports guarded ----------
+def _safe_import_lgbm():
+    try:
+        from lightgbm import LGBMClassifier
+        return LGBMClassifier
+    except Exception:
         return None
 
-# ---------- 14. Model Kaydetme ----------
-def save_best_model(best_model, best_model_name, scaler, le, results_df):
-    """En iyi modeli ve diğer bileşenleri kaydeder"""
-    import datetime
-    
-    # Çıktı klasörü oluştur
-    output_dir = 'model_outputs'
-    os.makedirs(output_dir, exist_ok=True)
-    
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_filename = os.path.join(output_dir, f"best_model_{best_model_name.replace(' ', '_')}_{timestamp}.pkl")
-    scaler_filename = os.path.join(output_dir, f"scaler_{timestamp}.pkl")
-    encoder_filename = os.path.join(output_dir, f"label_encoder_{timestamp}.pkl")
-    results_filename = os.path.join(output_dir, f"model_results_{timestamp}.csv")
-    
-    # Modeli kaydet
-    joblib.dump(best_model, model_filename)
-    joblib.dump(scaler, scaler_filename)
-    joblib.dump(le, encoder_filename)
-    results_df.to_csv(results_filename, index=False)
-    
-    print(f"\n💾 MODELLER KAYDEDİLDİ:")
-    print(f"   📁 Model: {model_filename}")
-    print(f"   📁 Scaler: {scaler_filename}")
-    print(f"   📁 Label Encoder: {encoder_filename}")
-    print(f"   📁 Results: {results_filename}")
+def _safe_import_xgb():
+    try:
+        from xgboost import XGBClassifier
+        return XGBClassifier
+    except Exception:
+        return None
 
-# ---------- 15. Ana İşlem Akışı ----------
+def _safe_import_cat():
+    try:
+        from catboost import CatBoostClassifier
+        return CatBoostClassifier
+    except Exception:
+        return None
+
+def _safe_import_optuna():
+    try:
+        import optuna
+        return optuna
+    except Exception:
+        return None
+
+# ---------- Data utilities ----------
+def load_prefer_clean():
+    import os
+    
+    # Scriptin bulunduğu dizini al
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Data klasörü yolunu oluştur
+    data_dir = os.path.join(current_dir, "Data")
+    
+    # Olası dosya konumları - sadece Data klasörü içinde
+    candidates = [
+        os.path.join(data_dir, "Crop_recommendation_cleaned.csv")
+    ]
+    
+    for file_path in candidates:
+        if os.path.exists(file_path):
+            print(f"[DATA] Found dataset at: {file_path}")
+            try:
+                df = pd.read_csv(file_path)
+            except Exception:
+                try:
+                    df = pd.read_csv(file_path, sep=';')
+                except Exception:
+                    df = pd.read_csv(file_path, sep=',')
+            df = _ensure_clean(df)
+            return df, f"Loaded: {file_path}"
+    
+    raise FileNotFoundError(
+        f"Dataset not found in Data folder. Please place CSV file in: {data_dir}"
+    )
+
+def _ensure_clean(df: pd.DataFrame) -> pd.DataFrame:
+    # Standardize columns
+    df = df.copy()
+    df.columns = [c.strip().lower() for c in df.columns]
+    if 'label' not in df.columns:
+        raise ValueError("Expected a 'label' column in the dataset.")
+    # Convert non-label numeric like '1.234,56' -> 1234.56
+    num_cols = [c for c in df.columns if c != 'label']
+    for c in num_cols:
+        s = df[c].astype(str)
+        s = s.str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
+        # Try numeric; if conversion makes NaNs explode, fallback to original if already numeric-like
+        converted = pd.to_numeric(s, errors='coerce')
+        if converted.notna().mean() >= 0.95:  # accept if >=95% convertible
+            df[c] = converted
+        else:
+            # Try direct numeric without replacement
+            df[c] = pd.to_numeric(df[c], errors='ignore')
+    # Drop rows with NA in any feature or label
+    df = df.dropna(subset=num_cols + ['label']).reset_index(drop=True)
+    return df
+
+def split_and_scale(X, y_enc, test_size=0.2, random_state=RANDOM_STATE):
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_enc, test_size=test_size, random_state=random_state, stratify=y_enc
+    )
+    scaler = StandardScaler()
+    X_train_s = scaler.fit_transform(X_train)
+    X_test_s = scaler.transform(X_test)
+    return X_train, X_test, y_train, y_test, X_train_s, X_test_s, scaler
+
+# ---------- Models ----------
+def define_models():
+    LGBMClassifier = _safe_import_lgbm()
+    XGBClassifier = _safe_import_xgb()
+    CatBoostClassifier = _safe_import_cat()
+
+    models = {
+        "Logistic Regression": LogisticRegression(max_iter=2000, multi_class='ovr', n_jobs=-1, random_state=RANDOM_STATE),
+        "Random Forest": RandomForestClassifier(
+            n_estimators=300, max_depth=None, n_jobs=-1, random_state=RANDOM_STATE
+        ),
+    }
+    if XGBClassifier is not None:
+        models["XGBoost"] = XGBClassifier(
+            n_estimators=300, learning_rate=0.05, max_depth=6,
+            subsample=0.9, colsample_bytree=0.9, random_state=RANDOM_STATE,
+            eval_metric='mlogloss', tree_method="hist"
+        )
+    if LGBMClassifier is not None:
+        models["LightGBM"] = LGBMClassifier(
+            n_estimators=320, max_depth=-1, learning_rate=0.07,
+            num_leaves=60, subsample=0.9, colsample_bytree=0.9,
+            min_child_samples=20, reg_lambda=2.0, reg_alpha=0.3,
+            random_state=RANDOM_STATE, n_jobs=-1
+        )
+    if CatBoostClassifier is not None:
+        models["CatBoost"] = CatBoostClassifier(
+            iterations=300, depth=8, learning_rate=0.05, loss_function='MultiClass',
+            random_seed=RANDOM_STATE, verbose=False
+        )
+    return models
+
+def needs_scaling(model_name: str) -> bool:
+    return model_name in {"Logistic Regression"}
+
+# ---------- CV helper ----------
+def compute_cv(model, name, X, y, Xs=None, cv=5, scoring='f1_weighted'):
+    data = Xs if needs_scaling(name) else X
+    kf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=RANDOM_STATE)
+    scores = cross_val_score(model, data, y, cv=kf, scoring=scoring, n_jobs=-1)
+    return scores
+
+# ---------- Optuna tuning for LightGBM & XGBoost ----------
+def tune_with_optuna(name, base_model, X, y, Xs=None, n_trials=30):
+    optuna = _safe_import_optuna()
+    if optuna is None:
+        return base_model, None  # Optuna not available
+
+    if name.lower().startswith("lightgbm"):
+        LGBMClassifier = _safe_import_lgbm()
+        if LGBMClassifier is None:
+            return base_model, None
+
+        def objective(trial):
+            params = {
+                "n_estimators": trial.suggest_int("n_estimators", 150, 500),
+                "max_depth": trial.suggest_int("max_depth", -1, 14),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+                "num_leaves": trial.suggest_int("num_leaves", 20, 120),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                "min_child_samples": trial.suggest_int("min_child_samples", 5, 40),
+                "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 5.0),
+                "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 2.0),
+                "random_state": RANDOM_STATE,
+                "n_jobs": -1
+            }
+            model = LGBMClassifier(**params)
+            data = Xs if Xs is not None else X
+            kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
+            scores = cross_val_score(model, data, y, cv=kf, scoring='f1_weighted', n_jobs=-1)
+            return float(np.mean(scores))
+
+        study = optuna.create_study(direction="maximize")
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+        best_params = study.best_params
+        tuned = LGBMClassifier(**best_params)
+        return tuned, best_params
+
+    if name.lower().startswith("xgboost"):
+        XGBClassifier = _safe_import_xgb()
+        if XGBClassifier is None:
+            return base_model, None
+
+        def objective(trial):
+            params = {
+                "n_estimators": trial.suggest_int("n_estimators", 150, 500),
+                "max_depth": trial.suggest_int("max_depth", 3, 12),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                "gamma": trial.suggest_float("gamma", 0.0, 5.0),
+                "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 5.0),
+                "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 2.0),
+                "random_state": RANDOM_STATE,
+                "eval_metric": "mlogloss",
+                "tree_method": "hist"
+            }
+            from xgboost import XGBClassifier
+            model = XGBClassifier(**params)
+            data = Xs if Xs is not None else X
+            kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
+            scores = cross_val_score(model, data, y, cv=kf, scoring='f1_weighted', n_jobs=-1)
+            return float(np.mean(scores))
+
+        study = optuna.create_study(direction="maximize")
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+        best_params = study.best_params
+        tuned = XGBClassifier(**best_params)
+        return tuned, best_params
+
+    return base_model, None
+
+# ---------- Main ----------
 def main():
-    """Ana model eğitimi ve değerlendirme fonksiyonu"""
-    print("🚀 GELİŞMİŞ RANDOM FOREST MODEL EĞİTİMİ BAŞLATILIYOR...")
-    print("="*70)
-    
-    # Modelleri ve parametre grid'lerini al
-    models = get_models()
-    param_grids = get_param_grids()
-    
-    # 1. Cross Validation
-    print("\n1️⃣ CROSS VALIDATION AŞAMASI")
-    print("-" * 50)
-    cv_results = perform_cross_validation(models, X_train, X_train_scaled, y_train_encoded, cv=5)
-    
-    # 2. Hiperparametre Optimizasyonu
-    print("\n2️⃣ HİPERPARAMETRE OPTİMİZASYONU AŞAMASI")
-    print("-" * 50)
-    best_models, tuning_results = perform_hyperparameter_tuning(models, param_grids, X_train, X_train_scaled, y_train_encoded)
-    
-    # 3. Model Değerlendirme
-    print("\n3️⃣ MODEL DEĞERLENDİRME AŞAMASI")
-    print("-" * 50)
-    evaluation_results = evaluate_models(best_models, X_test, X_test_scaled, y_test_encoded, le)
-    
-    # 4. Model Karşılaştırma
-    print("\n4️⃣ MODEL KARŞILAŞTIRMA AŞAMASI")
-    print("-" * 50)
-    comparison_df = plot_model_comparison(evaluation_results, cv_results)
-    
-    # 5. En İyi Model Seçimi ve Detaylı Analiz
-    best_model_name = comparison_df.iloc[0]['Model']
-    best_model = best_models[best_model_name]
-    
-    print(f"\n🏆 EN İYİ MODEL SEÇİLDİ: {best_model_name}")
-    print(f"📈 Test Accuracy: {comparison_df.iloc[0]['Test_Accuracy']:.4f}")
-    print(f"🎯 Test F1-Score: {comparison_df.iloc[0]['Test_F1_Score']:.4f}")
-    
-    # Detaylı analiz
-    y_pred_best = detailed_best_model_analysis(best_model, best_model_name, X_test, X_test_scaled, y_test_encoded, le)
-    
-    # Feature importance
-    if best_model_name in ['Random Forest', 'Decision Tree']:
-        feature_importance_df = plot_feature_importance(best_model, best_model_name, X.columns.values)
-    
-    # Model kaydetme
-    save_best_model(best_model, best_model_name, scaler, le, comparison_df)
-    
-    # Sonuç özeti
-    print("\n" + "="*70)
-    print("✅ MODELLEME SÜRECİ TAMAMLANDI")
-    print("="*70)
-    print(f"🏆 En İyi Model: {best_model_name}")
-    print(f"📈 Test Doğruluğu: {comparison_df.iloc[0]['Test_Accuracy']:.4f}")
-    print(f"🎯 Test F1-Score: {comparison_df.iloc[0]['Test_F1_Score']:.4f}")
-    print(f"📚 Toplam Model Sayısı: {len(models)}")
-    print(f"🔢 Eğitim Örnekleri: {X_train.shape[0]}")
-    print(f"🧪 Test Örnekleri: {X_test.shape[0]}")
-    print(f"🌱 Ürün Çeşit Sayısı: {len(le.classes_)}")
-    print("="*70)
+    # 1) Load data (prefer cleaned)
+    df, note = load_prefer_clean()
+    print(f"[DATA] {note} | shape={df.shape}")
+    print(f"[DATA] columns={list(df.columns)}")
 
-# Program başlangıcı
+    # 2) Prepare X/y
+    X = df.drop(columns=['label'])
+    y = df['label']
+    le = LabelEncoder()
+    y_enc = le.fit_transform(y)
+
+    # 3) Split + Scale
+    X_train, X_test, y_train, y_test, X_train_s, X_test_s, scaler = split_and_scale(X, y_enc)
+
+    # 4) Define models
+    models = define_models()
+
+    # 5) (Optional) Optuna tuning for LGBM and XGB
+    tuned_models = {}
+    best_params_log = {}
+    for name, model in models.items():
+        data_for_tuning = X_train_s if needs_scaling(name) else X_train
+        tuned, params = tune_with_optuna(name, model, X_train, y_train, Xs=data_for_tuning, n_trials=30)
+        tuned_models[name] = tuned
+        if params is not None:
+            best_params_log[name] = params
+            print(f"[OPTUNA] {name} best params: {params}")
+        else:
+            print(f"[OPTUNA] {name} skipped or unchanged.")
+
+    # 6) CV scores (5-fold) for all tuned models
+    cv_rows = []
+    for name, model in tuned_models.items():
+        data = X_train_s if needs_scaling(name) else X_train
+        scores = compute_cv(model, name, X_train, y_train, Xs=data, cv=5, scoring='f1_weighted')
+        cv_rows.append({
+            "Model": name,
+            "CV_F1_mean": float(np.mean(scores)),
+            "CV_F1_std": float(np.std(scores)),
+            "CV_Scores": [float(s) for s in scores],
+        })
+        print(f"[CV] {name}: {np.mean(scores):.4f} ± {np.std(scores):.4f}")
+
+    cv_df = pd.DataFrame(cv_rows).sort_values("CV_F1_mean", ascending=False)
+
+    # 7) Fit on train & evaluate on test set
+    eval_rows = []
+    best = {"name": None, "f1": -1, "model": None, "scaled": False}
+    for name, model in tuned_models.items():
+        if needs_scaling(name):
+            model.fit(X_train_s, y_train)
+            y_pred = model.predict(X_test_s)
+        else:
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+
+        acc = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred, average='weighted')
+        prec = precision_score(y_test, y_pred, average='weighted')
+        rec = recall_score(y_test, y_pred, average='weighted')
+
+        eval_rows.append({
+            "Model": name,
+            "Test_Accuracy": float(acc),
+            "Test_F1": float(f1),
+            "Test_Precision": float(prec),
+            "Test_Recall": float(rec)
+        })
+        print(f"[TEST] {name}: acc={acc:.4f} f1={f1:.4f} prec={prec:.4f} rec={rec:.4f}")
+
+        if f1 > best["f1"]:
+            best.update({"name": name, "f1": f1, "model": model, "scaled": needs_scaling(name)})
+
+    eval_df = pd.DataFrame(eval_rows).sort_values("Test_F1", ascending=False)
+
+    # 8) Save artifacts
+    outputs = Path("model_outputs"); outputs.mkdir(exist_ok=True, parents=True)
+    ts = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+    cv_df.to_csv(outputs / "cv_results.csv", index=False)
+    eval_df.to_csv(outputs / "test_results.csv", index=False)
+
+    joblib.dump(best["model"], outputs / f"best_model_{best['name'].replace(' ', '_')}_{ts}.pkl")
+    joblib.dump(scaler, outputs / f"scaler_{ts}.pkl")
+    joblib.dump(le, outputs / f"label_encoder_{ts}.pkl")
+
+    with open(outputs / f"best_params_{ts}.json", "w", encoding="utf-8") as f:
+        json.dump(best_params_log, f, ensure_ascii=False, indent=2)
+
+    summary = {
+        "data_note": note,
+        "cv_top": cv_df.head(5).to_dict(orient="records"),
+        "test_top": eval_df.head(5).to_dict(orient="records"),
+        "best_model": best["name"],
+        "best_f1": float(best["f1"]),
+    }
+    with open(outputs / f"summary_{ts}.json", "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+
+    # 9) SHAP (optional quick summary for tree-based best model)
+    try:
+        import shap
+        if "forest" in best["name"].lower() or "boost" in best["name"].lower() or "gbm" in best["name"].lower() or "catboost" in best["name"].lower():
+            data = X_train if not best["scaled"] else X_train_s
+            # Use TreeExplainer when available
+            explainer = shap.TreeExplainer(best["model"])
+            sv = explainer.shap_values(data[:500])  # sample
+            np.save(outputs / f"shap_values_{ts}.npy", sv if isinstance(sv, np.ndarray) else np.array(sv, dtype=object))
+            print("[SHAP] Saved sample SHAP values.")
+    except Exception as e:
+        print(f"[SHAP] Skipped: {e}")
+        
+    # 10) Visualization Section
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        from sklearn.metrics import confusion_matrix
+
+        viz_dir = outputs  # Kaydedilecek klasör
+
+        # === 1. Korelasyon Matrisi ===
+        plt.figure(figsize=(10, 8))
+        numeric_df = df.select_dtypes(include=[np.number])
+        if not numeric_df.empty:
+            sns.heatmap(numeric_df.corr(), annot=True, cmap="YlGnBu", fmt=".2f", linewidths=0.5)
+            plt.title("Korelasyon Matrisi – Sayısal Özellikler", fontsize=14, fontweight='bold')
+            plt.tight_layout()
+            plt.savefig(viz_dir / "corr_matrix.png", dpi=300, bbox_inches='tight')
+            plt.close()
+            print("[VIZ] Korelasyon matrisi kaydedildi")
+
+        # === 2. Model F1 Karşılaştırması (Test Sonuçları) ===
+        plt.figure(figsize=(10, 6))
+        # Renk paletini iyileştir
+        colors = sns.color_palette("viridis", len(eval_df))
+        bars = plt.bar(range(len(eval_df)), eval_df["Test_F1"], color=colors, alpha=0.8)
+        
+        # Değerleri çubukların üzerine yaz
+        for i, (bar, row) in enumerate(zip(bars, eval_df.itertuples())):
+            plt.text(i, bar.get_height() + 0.01, f'{row.Test_F1:.3f}', 
+                    ha='center', va='bottom', fontweight='bold')
+        
+        plt.xticks(range(len(eval_df)), [m[:15] + '...' if len(m) > 15 else m for m in eval_df["Model"]], rotation=45)
+        plt.ylabel("F1 Skoru")
+        plt.title("Model Karşılaştırması – F1 Skoru (Test Seti)", fontsize=14, fontweight='bold')
+        plt.ylim(0, 1.1)
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(viz_dir / "model_f1_comparison.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        print("[VIZ] Model F1 karşılaştırması kaydedildi")
+
+        # === 3. Confusion Matrix (Best Model) ===
+        y_pred_best = (
+            best["model"].predict(X_test_s)
+            if best["scaled"]
+            else best["model"].predict(X_test)
+        )
+        
+        cm = confusion_matrix(y_test, y_pred_best)
+        plt.figure(figsize=(12, 10))
+        
+        # Normalize confusion matrix
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        
+        sns.heatmap(cm_normalized, annot=True, fmt=".2f", cmap="Greens", 
+                   xticklabels=le.classes_, yticklabels=le.classes_,
+                   cbar_kws={'label': 'Doğruluk Oranı'})
+        
+        plt.title(f"Confusion Matrix – {best['name']}\n(Normalize)", fontsize=14, fontweight='bold')
+        plt.xlabel("Tahmin Edilen Sınıf")
+        plt.ylabel("Gerçek Sınıf")
+        plt.tight_layout()
+        plt.savefig(viz_dir / "confusion_matrix.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        print("[VIZ] Confusion matrix kaydedildi")
+
+        # === 4. Feature Importance (eğer tree-based ise) ===
+        if hasattr(best["model"], "feature_importances_"):
+            feat_imp = pd.DataFrame({
+                "Feature": X.columns,
+                "Importance": best["model"].feature_importances_
+            }).sort_values(by="Importance", ascending=True)  # Son çubuğun en üstte olması için
+            
+            plt.figure(figsize=(10, 8))
+            bars = plt.barh(range(len(feat_imp)), feat_imp["Importance"], 
+                           color=sns.color_palette("YlGn", len(feat_imp)))
+            
+            # Değerleri çubukların sonuna yaz
+            for i, (bar, imp) in enumerate(zip(bars, feat_imp["Importance"])):
+                plt.text(bar.get_width() + 0.001, bar.get_y() + bar.get_height()/2, 
+                        f'{imp:.4f}', va='center', fontsize=9)
+            
+            plt.yticks(range(len(feat_imp)), feat_imp["Feature"])
+            plt.xlabel("Özellik Önem Skoru")
+            plt.title(f"Feature Importance – {best['name']}", fontsize=14, fontweight='bold')
+            plt.grid(axis='x', alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(viz_dir / "feature_importance.png", dpi=300, bbox_inches='tight')
+            plt.close()
+            print("[VIZ] Feature importance grafiği kaydedildi")
+
+        # === 5. SHAP Summary Plot (sadece LightGBM, XGB, RF vb.) ===
+        try:
+            import shap
+            if any(k in best["name"].lower() for k in ["forest", "boost", "gbm", "catboost"]):
+                data_for_shap = X_train_s if best["scaled"] else X_train
+                explainer = shap.TreeExplainer(best["model"])
+                shap_values = explainer.shap_values(data_for_shap[:200])  # Daha küçük örneklem
+                
+                plt.figure(figsize=(10, 8))
+                shap.summary_plot(shap_values, data_for_shap[:200], 
+                                feature_names=X.columns.tolist(), show=False)
+                plt.title("SHAP Summary Plot – Özellik Katkıları", fontsize=14, fontweight='bold')
+                plt.tight_layout()
+                plt.savefig(viz_dir / "shap_summary.png", dpi=300, bbox_inches='tight')
+                plt.close()
+                print("[VIZ] SHAP summary plot kaydedildi")
+                
+        except Exception as e:
+            print(f"[WARN] SHAP plot skipped: {e}")
+
+        print("[VIZ] Tüm görseller başarıyla oluşturuldu ve kaydedildi.")
+
+    except Exception as e:
+        print(f"[VIZ] Görsel oluşturma hatası: {e}")
+
+    print("\n" + "="*50)
+    print("🏆 SONUÇ ÖZETİ")
+    print("="*50)
+    print(f"En İyi Model: {best['name']}")
+    print(f"En İyi F1 Skoru: {best['f1']:.4f}")
+    print(f"Toplam Model Sayısı: {len(tuned_models)}")
+    print(f"Veri Boyutu: {df.shape}")
+    print(f"Çıktı Klasörü: {outputs.resolve()}")
+    print("="*50)
+
 if __name__ == "__main__":
     main()
