@@ -84,7 +84,12 @@ pi-heif
 pytesseract
 pillow
 
-
+# Machine Learning & Data Science
+joblib>=1.2.0
+matplotlib>=3.5.0
+seaborn>=0.11.0
+lightgbm
+imbalanced-learn
 # ===================================
 # SECURITY & PERFORMANCE
 # ===================================
