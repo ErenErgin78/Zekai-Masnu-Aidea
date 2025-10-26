@@ -27,43 +27,18 @@ class AideaChat {
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
         this.themeToggle = document.getElementById('themeToggle');
+        this.sidebarToggle = document.getElementById('sidebarToggle');
+        this.chatSidebar = document.getElementById('chatSidebar');
+        this.weatherBtn = document.getElementById('weatherBtn');
+        this.soilBtn = document.getElementById('soilBtn');
+        this.weatherContent = document.getElementById('weatherContent');
+        this.soilContent = document.getElementById('soilContent');
         
         // Chat geçmişi için container oluştur
         this.createChatHistoryUI();
     }
     
     createChatHistoryUI() {
-        // Eğer sidebar zaten varsa, tekrar oluşturma
-        if (document.querySelector('.chat-sidebar')) {
-            return;
-        }
-        
-        // Chat geçmişi sidebar'ı oluştur
-        const sidebar = document.createElement('div');
-        sidebar.className = 'chat-sidebar';
-        sidebar.innerHTML = `
-            <div class="chat-header-sidebar">
-                <h3>💬 Sohbetler</h3>
-                <button id="newChatBtn" class="new-chat-btn">+ Yeni Sohbet</button>
-            </div>
-            <div class="chat-list" id="chatList">
-                <!-- Chat listesi buraya gelecek -->
-            </div>
-        `;
-        
-        // Ana container'a ekle
-        const appContainer = document.querySelector('.app-container');
-        appContainer.appendChild(sidebar);
-        
-        // Yeni chat butonu event listener (sadece bir kez ekle)
-        const newChatBtn = document.getElementById('newChatBtn');
-        if (newChatBtn && !newChatBtn.hasAttribute('data-listener-added')) {
-            newChatBtn.addEventListener('click', () => {
-                this.startNewChat();
-            });
-            newChatBtn.setAttribute('data-listener-added', 'true');
-        }
-        
         // Chat listesini yükle
         this.loadChatHistory();
     }
@@ -87,6 +62,28 @@ class AideaChat {
         
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        
+        // Sidebar toggle
+        this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+        
+        // Yeni chat butonu event listener
+        const newChatBtn = document.getElementById('newChatBtn');
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => {
+                this.startNewChat();
+                this.toggleSidebar(); // Sidebar'ı kapat
+            });
+        }
+        
+        // Weather button
+        if (this.weatherBtn) {
+            this.weatherBtn.addEventListener('click', () => this.loadWeatherData());
+        }
+        
+        // Soil button
+        if (this.soilBtn) {
+            this.soilBtn.addEventListener('click', () => this.loadSoilData());
+        }
     }
     
     setupTyping() {
@@ -426,6 +423,9 @@ class AideaChat {
         
         // Chat listesini güncelle (sadece UI, event listener ekleme)
         this.updateChatListUI();
+        
+        // Sidebar'ı kapat
+        this.toggleSidebar();
     }
     
     updateChatListUI() {
@@ -503,6 +503,204 @@ class AideaChat {
         
         const themeIcon = this.themeToggle.querySelector('.theme-icon');
         themeIcon.textContent = this.theme === 'light' ? '🌙' : '☀️';
+    }
+    
+    toggleSidebar() {
+        if (this.chatSidebar) {
+            this.chatSidebar.classList.toggle('open');
+        }
+    }
+    
+    async loadWeatherData() {
+        if (!this.weatherBtn || !this.weatherContent) return;
+        
+        // Butonu devre dışı bırak
+        this.weatherBtn.disabled = true;
+        this.weatherBtn.textContent = 'Yükleniyor...';
+        
+        try {
+            // Konum bilgisini al
+            const location = await this.getCurrentLocation();
+            
+            // Weather API'ye istek gönder
+            const response = await fetch('http://localhost:8001/weather/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    latitude: location?.lat,
+                    longitude: location?.lon
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const weatherData = await response.json();
+            
+            // Weather panelini güncelle - detaylı verilerle
+            this.weatherContent.innerHTML = `
+                <div class="weather-data">
+                    <div class="weather-main">
+                        <div class="weather-temp">${weatherData.temperature ? Math.round(weatherData.temperature) : 'N/A'}°C</div>
+                        <div class="weather-desc">${weatherData.weather_code || 'N/A'}</div>
+                    </div>
+                    <div class="weather-details">
+                        <div class="weather-item">
+                            <span class="weather-label">Hissedilen Min:</span>
+                            <span class="weather-value">${weatherData.apparent_temperature_min ? Math.round(weatherData.apparent_temperature_min) : 'N/A'}°C</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Hissedilen Ort:</span>
+                            <span class="weather-value">${weatherData.apparent_temperature_mean ? Math.round(weatherData.apparent_temperature_mean) : 'N/A'}°C</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Hissedilen Max:</span>
+                            <span class="weather-value">${weatherData.apparent_temperature_max ? Math.round(weatherData.apparent_temperature_max) : 'N/A'}°C</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Yağmur:</span>
+                            <span class="weather-value">${weatherData.rain_sum || 'N/A'} mm</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Sağanak:</span>
+                            <span class="weather-value">${weatherData.showers_sum || 'N/A'} mm</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Kar:</span>
+                            <span class="weather-value">${weatherData.snowfall_sum || 'N/A'} mm</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Toplam Yağış:</span>
+                            <span class="weather-value">${weatherData.precipitation_sum || 'N/A'} mm</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Rüzgar Max:</span>
+                            <span class="weather-value">${weatherData.wind_speed_max || 'N/A'} km/h</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Rüzgar Böre:</span>
+                            <span class="weather-value">${weatherData.wind_gusts_max || 'N/A'} km/h</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Güneşlenme:</span>
+                            <span class="weather-value">${weatherData.sunshine_duration ? Math.round(weatherData.sunshine_duration/3600) : 'N/A'} saat</span>
+                        </div>
+                    </div>
+                    <button class="panel-btn" onclick="this.loadWeatherData()">Yenile</button>
+                </div>
+            `;
+            
+        } catch (error) {
+            console.error('Weather API hatası:', error);
+            this.weatherContent.innerHTML = `
+                <div class="panel-placeholder">
+                    <div class="placeholder-icon">⚠️</div>
+                    <p>Hava durumu bilgileri alınamadı</p>
+                    <button class="panel-btn" onclick="this.loadWeatherData()">Tekrar Dene</button>
+                </div>
+            `;
+        }
+    }
+    
+    async loadSoilData() {
+        if (!this.soilBtn || !this.soilContent) return;
+        
+        // Butonu devre dışı bırak
+        this.soilBtn.disabled = true;
+        this.soilBtn.textContent = 'Yükleniyor...';
+        
+        try {
+            // Konum bilgisini al
+            const location = await this.getCurrentLocation();
+            
+            // Soil API'ye istek gönder
+            const response = await fetch('http://localhost:8001/soil/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    latitude: location?.lat,
+                    longitude: location?.lon
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const soilData = await response.json();
+            
+            // Soil panelini güncelle - tüm özellikleri göster
+            let soilDetailsHTML = '';
+            
+            // Tüm özellikleri döngü ile ekle
+            for (const [key, value] of Object.entries(soilData)) {
+                if (key !== 'soil_type' && key !== 'soil_code' && key !== 'description' && value !== 'N/A' && value !== null) {
+                    // Label'ı Türkçe'ye çevir
+                    let label = key;
+                    const labelMap = {
+                        'pH': 'pH',
+                        'Organic Carbon': 'Organik Madde',
+                        'Total Nitrogen': 'Toplam Azot',
+                        'C/N Ratio': 'C/N Oranı',
+                        'Clay': 'Kil',
+                        'Silt': 'Silt',
+                        'Sand': 'Kum',
+                        'Coarse Fragments': 'Kaba Parçacıklar',
+                        'Bulk Density': 'Yoğunluk',
+                        'Reference Bulk Density': 'Referans Yoğunluk',
+                        'Root Depth': 'Kök Derinliği',
+                        'Available Water Capacity': 'Su Kapasitesi',
+                        'Cation Exchange Capacity': 'Katyon Değişim Kapasitesi',
+                        'Clay CEC': 'Kil CEC',
+                        'Effective CEC': 'Etkili CEC',
+                        'Total Exchangeable Bases': 'Toplam Değişebilir Bazlar',
+                        'Base Saturation': 'Baz Doygunluğu',
+                        'Exchangeable Sodium Percentage': 'Değişebilir Sodyum Yüzdesi',
+                        'Aluminum Saturation': 'Alüminyum Doygunluğu',
+                        'Electrical Conductivity': 'Elektriksel İletkenlik',
+                        'Total Carbon Equivalent': 'Toplam Karbon Eşdeğeri',
+                        'Gypsum Content': 'Jips İçeriği'
+                    };
+                    
+                    label = labelMap[key] || key;
+                    
+                    soilDetailsHTML += `
+                        <div class="soil-item">
+                            <span class="soil-label">${label}:</span>
+                            <span class="soil-value">${value}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            this.soilContent.innerHTML = `
+                <div class="soil-data">
+                    <div class="soil-main">
+                        <div class="soil-type">${soilData.soil_type || 'Bilinmiyor'}</div>
+                        <div class="soil-desc">${soilData.description || 'Toprak analizi yapılamadı'}</div>
+                    </div>
+                    <div class="soil-details">
+                        ${soilDetailsHTML}
+                    </div>
+                    <button class="panel-btn" onclick="this.loadSoilData()">Yenile</button>
+                </div>
+            `;
+            
+        } catch (error) {
+            console.error('Soil API hatası:', error);
+            this.soilContent.innerHTML = `
+                <div class="panel-placeholder">
+                    <div class="placeholder-icon">⚠️</div>
+                    <p>Toprak analizi bilgileri alınamadı</p>
+                    <button class="panel-btn" onclick="this.loadSoilData()">Tekrar Dene</button>
+                </div>
+            `;
+        }
     }
 }
 

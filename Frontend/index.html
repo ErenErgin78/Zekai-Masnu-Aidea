@@ -18,8 +18,40 @@
 <body>
     <!-- Ana Container -->
     <div class="app-container">
-        <!-- Chat Container -->
-        <div class="chat-container">
+        <!-- Chat Sidebar Toggle Button -->
+        <button id="sidebarToggle" class="sidebar-toggle">
+            <span class="sidebar-icon">☰</span>
+        </button>
+        
+        <!-- Chat Sidebar -->
+        <div class="chat-sidebar" id="chatSidebar">
+            <div class="chat-header-sidebar">
+                <h3>💬 Sohbetler</h3>
+                <button id="newChatBtn" class="new-chat-btn">+ Yeni Sohbet</button>
+            </div>
+            <div class="chat-list" id="chatList">
+                <!-- Chat listesi buraya gelecek -->
+            </div>
+        </div>
+        
+        <!-- Main Panels Container -->
+        <div class="panels-container">
+            <!-- Weather Panel (Sol) -->
+            <div class="info-panel weather-panel">
+                <div class="panel-header">
+                    <h3>🌤️ Hava Durumu</h3>
+                </div>
+                <div class="panel-content" id="weatherContent">
+                    <div class="panel-placeholder">
+                        <div class="placeholder-icon">🌤️</div>
+                        <p>Hava durumu bilgilerini almak için butona basın</p>
+                        <button id="weatherBtn" class="panel-btn">Hava Durumu Al</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Container (Orta) -->
+            <div class="chat-container">
             <!-- Chat Header -->
             <div class="chat-header">
                 <div class="chat-title">
@@ -49,6 +81,21 @@
                     <button id="sendButton" class="send-btn">
                         <span class="send-icon">📤</span>
                     </button>
+                </div>
+            </div>
+            </div>
+            
+            <!-- Soil Analysis Panel (Sağ) -->
+            <div class="info-panel soil-panel">
+                <div class="panel-header">
+                    <h3>🌱 Toprak Analizi</h3>
+                </div>
+                <div class="panel-content" id="soilContent">
+                    <div class="panel-placeholder">
+                        <div class="placeholder-icon">🌱</div>
+                        <p>Toprak analizi bilgilerini almak için butona basın</p>
+                        <button id="soilBtn" class="panel-btn">Toprak Analizi Al</button>
+                    </div>
                 </div>
             </div>
         </div>

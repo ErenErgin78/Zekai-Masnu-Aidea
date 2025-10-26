@@ -17,10 +17,10 @@ sunmaktadır.
 Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mimariye sahiptir:
 
 ### 1. Backend (Arka Plan Sistemi)
-- **Toprak Analizi Modülü:** Kullanıcının girdiği koordinat veya veri setine göre toprak tipi bilgilerini getirir (gerçek sensör bağlantısı yoktur, tamamen veri tabanı veya API üzerinden çalışır)
-- **Hava Durumu Modülü:** Dış kaynak API'lerinden meteorolojik verileri çeker
-- **Makine Öğrenmesi Modülü:** Tarımsal faktörlere göre uygun ürün tahminini yapar (Random Forest modeli)
-- **Veri Görselleştirme Aracı:** Model sonuçlarını grafik veya tablo şeklinde gösterir
+- **Toprak Analizi API:** `/soil/analyze` endpoint ile GPS koordinatlarından toprak bilgilerini getirir
+- **Hava Durumu API:** `/weather/current` endpoint ile meteorolojik verileri çeker
+- **ML Tahmin API:** `/ml/predict` endpoint ile Random Forest modeli ürün önerisi yapar
+- **RAG Bilgi API:** `/rag/search` endpoint ile PDF dokümanlardan bilgi arar
 
 ### 2. Bilgi Bankası (RAG – Retrieval Augmented Generation)
 - Tarım, iklim, gübreleme ve organik üretim konularında dijital PDF/metin içeriklerini işler
@@ -34,9 +34,10 @@ Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mim
 - **Karar Verme:** Her adımda hangi aracın çalıştırılacağına kendisi karar verir
 
 ### 4. Frontend (Kullanıcı Arayüzü)
-- Web tabanlı, mobil uyumlu bir sohbet ekranıdır
-- Kullanıcı mesajlarını backend'e iletir ve yapay zekadan gelen yanıtları sunar
-- Grafiksel analiz çıktıları da burada görüntülenir
+- **Chat Paneli:** Kullanıcı mesajları ve AI yanıtları için ana sohbet ekranı
+- **Analiz Paneli:** Toprak, hava durumu ve ML sonuçlarının görselleştirildiği alan
+- **API Bağlantısı:** FastAPI backend'e HTTP istekleri ile veri alışverişi
+- **Responsive Tasarım:** Mobil ve masaüstü cihazlarda uyumlu çalışma
 
 ## 🔄 Sistem Akışı
 
