@@ -164,45 +164,6 @@ class OrganicFarmingChatBot:
                     },
                     "required": ["query"]
                 }
-            },
-            # ✅ YENİ: Crop Recommendation Function
-            {
-                "name": "recommend_crop",
-                "description": "Toprak ve iklim verilerine göre en uygun mahsulü önerir. Azot, fosfor, potasyum seviyeleri, sıcaklık, nem, pH ve yağış değerlerini kullanır.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "nitrogen": {
-                            "type": "NUMBER",
-                            "description": "Azot seviyesi (0-140 arası)"
-                        },
-                        "phosphorus": {
-                            "type": "NUMBER", 
-                            "description": "Fosfor seviyesi (5-145 arası)"
-                        },
-                        "potassium": {
-                            "type": "NUMBER",
-                            "description": "Potasyum seviyesi (5-205 arası)"
-                        },
-                        "temperature": {
-                            "type": "NUMBER",
-                            "description": "Sıcaklık (°C) (0-50 arası)"
-                        },
-                        "humidity": {
-                            "type": "NUMBER",
-                            "description": "Nem oranı (%) (10-100 arası)"
-                        },
-                        "ph": {
-                            "type": "NUMBER",
-                            "description": "Toprak pH değeri (3.5-10 arası)"
-                        },
-                        "rainfall": {
-                            "type": "NUMBER",
-                            "description": "Yağış miktarı (mm) (20-300 arası)"
-                        }
-                    },
-                    "required": ["nitrogen", "phosphorus", "potassium", "temperature", "humidity", "ph", "rainfall"]
-                }
             }
         ]
         
@@ -241,10 +202,6 @@ class OrganicFarmingChatBot:
 6. **research_agent_query**: Akıllı araştırma agent'ı
    - Kullanım: Karmaşık, çok yönlü sorularda
 
-7. **recommend_crop**: Toprak ve iklim verilerine göre mahsul önerisi
-   - Kullanım: "90 azot, 42 fosfor, 43 potasyum, 25°C sıcaklık, %70 nem, 6.5 pH, 150mm yağış için hangi mahsulü önerirsin?" gibi sorularda
-   - Tüm parametreler gereklidir: nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall
-   - Önerilen mahsul, güven seviyesi ve alternatif mahsuller sağlar
 
 📋 TOOL SEÇME STRATEJİSİ:
 
@@ -253,9 +210,6 @@ class OrganicFarmingChatBot:
 - "32.5, 37.8 koordinatındaki toprak nasıl?" → analyze_soil
 - "Organik gübre nasıl yapılır?" → query_organic_farming_knowledge
 
-**Mahsul Önerisi** → recommend_crop:
-- "90 azot, 42 fosfor, 43 potasyum, 25°C, %70 nem, 6.5 pH, 150mm yağış için hangi mahsul?" → recommend_crop
-- "Bu toprak değerlerine göre ne ekebilirim?" → recommend_crop (tüm parametreler gerekli)
 
 **Orta Seviye** → Chain kullan:
 - "Bu koordinattaki toprağı detaylı analiz et" → comprehensive_soil_analysis
@@ -651,51 +605,6 @@ class OrganicFarmingChatBot:
                     return f"❌ Research Agent import hatası: {e}"
                 except Exception as e:
                     return f"❌ Research Agent hatası: {e}"
-            
-            # ✅ YENİ: Crop Recommendation Function
-            elif function_name == "recommend_crop":
-                tool = self.service_manager.get_tool("crop_recommendation_tool")
-                if tool:
-                    try:
-                        # Parametreleri al
-                        nitrogen = args.get("nitrogen")
-                        phosphorus = args.get("phosphorus")
-                        potassium = args.get("potassium")
-                        temperature = args.get("temperature")
-                        humidity = args.get("humidity")
-                        ph = args.get("ph")
-                        rainfall = args.get("rainfall")
-                        
-                        print(f"🌱 Mahsul önerisi için parametreler: N={nitrogen}, P={phosphorus}, K={potassium}")
-                        
-                        # Mahsul önerisini al
-                        result = tool.recommend_crop(
-                            nitrogen=nitrogen,
-                            phosphorus=phosphorus,
-                            potassium=potassium,
-                            temperature=temperature,
-                            humidity=humidity,
-                            ph=ph,
-                            rainfall=rainfall
-                        )
-                        
-                        # Result'ı formatla
-                        if hasattr(result, 'recommended_crop'):
-                            response = f"🌱 ÖNERİLEN MAHSUL: {result.recommended_crop}\n"
-                            response += f"📊 GÜVEN SEVİYESİ: {result.confidence}\n"
-                            response += f"💡 AÇIKLAMA: {result.explanation}\n"
-                            
-                            if hasattr(result, 'alternative_crops') and result.alternative_crops:
-                                response += f"🔄 ALTERNATİF MAHSULLER: {', '.join(result.alternative_crops[:3])}\n"
-                            
-                            return response
-                        else:
-                            return f"Mahsul öneri sonucu: {result}"
-                            
-                    except Exception as e:
-                        return f"Mahsul öneri hatası: {str(e)}"
-                else:
-                    return "Mahsul öneri tool'u kullanılamıyor"
             
             else:
                 return f"Bilinmeyen fonksiyon: {function_name}"

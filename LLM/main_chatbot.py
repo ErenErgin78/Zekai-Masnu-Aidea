@@ -17,7 +17,6 @@ import uvicorn
 
 # Çıkışta API süreçlerini durdur
 api_process = None
-ml_api_process = None
 
 # Global chatbot instance
 chatbot_instance = None
@@ -37,7 +36,6 @@ class PathConfig:
     FRONTEND_STATIC_DIR = os.path.join(FRONTEND_DIR, "static")
     BACKEND_API = os.path.join(BASE_DIR, "Backend", "API")
     BACKEND_SOIL_API = os.path.join(BACKEND_API, "SoilType")
-    BACKEND_ML_API = os.path.join(BACKEND_API, "MachineLearning", "ML API")
     BACKEND_RAG = os.path.join(BASE_DIR, "Backend", "RAG")
     LLM_DIR = os.path.join(BASE_DIR, "LLM")
     AGENTS_DIR = os.path.join(LLM_DIR, "agents")
@@ -181,77 +179,14 @@ async def start_soil_api():
         print(f"❌ Soil+Weather API başlatma hatası: {e}")
         return False
 
-async def start_ml_api():
-    """ML API server'ını otomatik başlat"""
-    global ml_api_process
-    print("🔧 ML API server başlatılıyor...")
-    
-    try:
-        # ML API'nin çalışıp çalışmadığını kontrol et
-        import httpx
-        async with httpx.AsyncClient() as client:
-            response = await client.get("http://localhost:8002/docs", timeout=2.0)
-            if response.status_code == 200:
-                print("✅ ML API zaten çalışıyor!")
-                return True
-    except:
-        pass  # ML API çalışmıyor, başlatacağız
-    
-    # ML API'yi başlat
-    try:
-        # ML API dizinine git
-        ml_api_dir = PathConfig.BACKEND_ML_API
-        
-        # Virtual environment Python'u kullan
-        base_dir = PathConfig.BASE_DIR
-        env_python = os.path.join(base_dir, "env", "Scripts", "python.exe")
-        
-        if not os.path.exists(env_python):
-            print(f"❌ Virtual environment bulunamadı: {env_python}")
-            return False
-        
-        print(f"🔍 ML API için Virtual environment Python: {env_python}")
-        
-        # ML API'yi subprocess olarak başlat
-        ml_api_process = subprocess.Popen([
-            env_python, "machine_learning_api.py"
-        ], cwd=ml_api_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Başlatılmasını bekle
-        print("⏳ ML API başlatılıyor (model yüklenmesi zaman alabilir)...")
-        time.sleep(10)  # ML model yüklemesi için daha uzun süre bekle
-        
-        # Kontrol et
-        async with httpx.AsyncClient() as client:
-            for i in range(12):  # Daha fazla deneme
-                try:
-                    response = await client.get("http://localhost:8002/docs", timeout=15.0)
-                    if response.status_code == 200:
-                        print("✅ ML API başarıyla başlatıldı!")
-                        return True
-                    else:
-                        print(f"⏳ ML API yükleniyor... Deneme {i+1}/12")
-                except Exception as e:
-                    print(f"⏳ ML API başlatılıyor... Deneme {i+1}/12 - {e}")
-                
-                time.sleep(3)
-        
-        print("❌ ML API başlatılamadı! (Model yüklenmesi çok uzun sürüyor olabilir)")
-        return False
-        
-    except Exception as e:
-        print(f"❌ ML API başlatma hatası: {e}")
-        return False
 
 def cleanup_apis():
     """Uygulama kapatıldığında tüm API'leri kapat"""
-    global api_process, ml_api_process
+    global api_process
     print("🔴 Tüm API'ler kapatılıyor...")
     try:
         if api_process:
             api_process.terminate()
-        if ml_api_process:
-            ml_api_process.terminate()
         
         # subprocess'leri temizle
         import os
@@ -309,7 +244,6 @@ async def run_web_api():
     print("📱 Frontend: Frontend/index.html dosyasını tarayıcıda açın")
     print("🔗 Chatbot API: http://localhost:8001")
     print("🌱 Soil+Weather API: http://localhost:8000")
-    print("🤖 ML API: http://localhost:8002")
     print("📚 Docs: http://localhost:8001/docs")
     print("\n⏹️ Durdurmak için Ctrl+C")
     
@@ -336,17 +270,7 @@ async def initialize_chatbot():
         print("❌ Soil+Weather API olmadan devam edilemez!")
         return False
 
-    # ✅ 2. ML API'Yİ BAŞLAT
-    ml_api_started = await start_ml_api()
-    if not ml_api_started:
-        print("⚠️ ML API başlatılamadı, mahsul önerisi çalışmayacak!")
-        print("💡 Manuel olarak başlatmak için:")
-        print(f'cd "{PathConfig.BACKEND_ML_API}"')
-        print("python machine_learning_api.py")
-    else:
-        print("✅ ML API başlatıldı - Mahsul önerisi aktif!")
-    
-    print("Organik tarım, toprak analizi, hava durumu ve mahsul öneri asistanınız!")
+    print("Organik tarım, toprak analizi ve hava durumu asistanınız!")
     print("=" * 60)
     
     # Service Manager'ı başlat
@@ -521,60 +445,6 @@ async def soil_endpoint(request: dict):
         print(f"❌ Soil endpoint hatası: {e}")
         return {"error": f"Toprak analizi yapılamadı: {str(e)}"}
 
-# Crop recommendation endpoint for frontend
-@app.post("/crop-recommendation/")
-async def crop_recommendation_endpoint(request: dict):
-    """Frontend'den gelen mahsul önerisi isteklerini işle"""
-    try:
-        if not service_manager_instance:
-            return {"error": "Service manager henüz başlatılmadı"}
-        
-        # Mahsul önerisi tool'unu al
-        crop_tool = service_manager_instance.get_tool("crop_recommendation_tool")
-        if not crop_tool:
-            return {"error": "Mahsul öneri tool'u kullanılamıyor"}
-        
-        # Parametreleri al
-        nitrogen = request.get("nitrogen")
-        phosphorus = request.get("phosphorus")
-        potassium = request.get("potassium")
-        temperature = request.get("temperature")
-        humidity = request.get("humidity")
-        ph = request.get("ph")
-        rainfall = request.get("rainfall")
-        
-        # Gerekli parametreleri kontrol et
-        required_params = [nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]
-        if any(param is None for param in required_params):
-            return {"error": "Tüm parametreler gereklidir: nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall"}
-        
-        # Mahsul önerisini al
-        result = crop_tool.recommend_crop(
-            nitrogen=nitrogen,
-            phosphorus=phosphorus,
-            potassium=potassium,
-            temperature=temperature,
-            humidity=humidity,
-            ph=ph,
-            rainfall=rainfall
-        )
-        
-        # Sonucu formatla
-        if hasattr(result, 'recommended_crop'):
-            return {
-                "success": True,
-                "recommended_crop": result.recommended_crop,
-                "confidence": result.confidence,
-                "explanation": result.explanation,
-                "alternative_crops": result.alternative_crops if hasattr(result, 'alternative_crops') else [],
-                "model_used": result.model_used if hasattr(result, 'model_used') else "unknown"
-            }
-        else:
-            return {"error": "Mahsul önerisi alınamadı"}
-        
-    except Exception as e:
-        print(f"❌ Crop recommendation endpoint hatası: {e}")
-        return {"error": f"Mahsul önerisi yapılamadı: {str(e)}"}
 
 # Uvicorn server'ı başlat
 def start_server():
