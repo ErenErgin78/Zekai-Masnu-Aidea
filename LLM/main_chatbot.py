@@ -174,6 +174,56 @@ async def start_soil_api():
         
         print("❌ Soil+Weather API başlatılamadı!")
         return False
+    except Exception as e:
+        print(f"❌ Soil+Weather API başlatma hatası: {e}")
+        return False
+async def start_ml_api():
+    """ML API server'ını otomatik başlat (8003)."""
+    print("🔧 ML API server başlatılıyor (8003)...")
+    try:
+        # Çalışıyor mu?
+        import httpx
+        async with httpx.AsyncClient() as client:
+            try:
+                r = await client.get("http://localhost:8003/ml/health", timeout=2.0)
+                if r.status_code == 200:
+                    print("✅ ML API zaten çalışıyor!")
+                    return True
+            except Exception:
+                pass
+
+        # Başlat
+        base_dir = PathConfig.BASE_DIR
+        env_python = os.path.join(base_dir, "env", "Scripts", "python.exe")
+        ml_dir = os.path.join(base_dir, "Backend", "API", "MachineLearning")
+        if not os.path.exists(env_python):
+            print(f"❌ Virtual environment bulunamadı: {env_python}")
+            return False
+
+        proc = subprocess.Popen([
+            env_python, "ml_api.py"
+        ], cwd=ml_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Yükselebilmesi için bekle
+        import time
+        time.sleep(3)
+
+        # Kontrol et
+        async with httpx.AsyncClient() as client:
+            for i in range(10):
+                try:
+                    r = await client.get("http://localhost:8003/ml/health", timeout=5.0)
+                    if r.status_code == 200:
+                        print("✅ ML API başarıyla başlatıldı!")
+                        return True
+                except Exception as e:
+                    print(f"⏳ ML API yükleniyor... Deneme {i+1}/10 - {e}")
+                time.sleep(1)
+        print("❌ ML API başlatılamadı!")
+        return False
+    except Exception as e:
+        print(f"❌ ML API başlatma hatası: {e}")
+        return False
         
     except Exception as e:
         print(f"❌ Soil+Weather API başlatma hatası: {e}")
@@ -217,16 +267,8 @@ async def api_health():
 async def main():
     """Ana fonksiyon - Sadece Web API modu"""
     
-    print("""
-╔══════════════════════════════════════════════════════════╗
-║              🌱 AIDEA TARIM ASİSTANI 🌱                  ║
-║                                                          ║
-║  Organik Tarım | Toprak Analizi | Hava Durumu           ║
-║  Mahsul Önerisi | Akıllı Araştırma Agent'ı              ║
-╚══════════════════════════════════════════════════════════╝
-    """)
+    print("""🌱 AIDEA TARIM ASİSTANI 🌱""")
     
-    print("🌐 Web API Modu başlatılıyor...")
     await run_web_api()
 
 async def run_web_api():
@@ -268,6 +310,12 @@ async def initialize_chatbot():
     soil_api_started = await start_soil_api()
     if not soil_api_started:
         print("❌ Soil+Weather API olmadan devam edilemez!")
+        return False
+
+    # ✅ 2. ML API'Yİ BAŞLAT
+    ml_api_started = await start_ml_api()
+    if not ml_api_started:
+        print("❌ ML API olmadan devam edilemez!")
         return False
 
     print("Organik tarım, toprak analizi ve hava durumu asistanınız!")

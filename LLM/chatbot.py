@@ -140,6 +140,19 @@ class OrganicFarmingChatBot:
                 }
             },
             {
+                "name": "ml_crop_recommendation",
+                "description": "Toprak ve iklim verilerine göre ML modeliyle ürün önerisi yapar (Auto veya Manual).",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "use_auto_location": {"type": "BOOLEAN", "description": "Otomatik konum tespiti kullan"},
+                        "longitude": {"type": "NUMBER", "description": "Boylam (Manual için)"},
+                        "latitude": {"type": "NUMBER", "description": "Enlem (Manual için)"}
+                    },
+                    "required": ["use_auto_location"]
+                }
+            },
+            {
                 "name": "research_agent_query",
                 "description": "Akıllı araştırma agent'ı kullanarak karmaşık sorulara cevap verir. Birden fazla tool'u kullanarak derinlemesine araştırma yapar.",
                 "parameters": {
@@ -487,6 +500,17 @@ class OrganicFarmingChatBot:
                         return f"Analiz hatası: {result.get('error', 'Bilinmeyen hata')}"
                 else:
                     return "Analysis chain kullanılamıyor"
+            
+            elif function_name == "ml_crop_recommendation":
+                # ML Recommendation Tool'u çalıştır
+                try:
+                    from tools.ml_tool import MLRecommendationTool
+                    tool = MLRecommendationTool(base_url="http://localhost:8003")
+                    # Her zaman otomatik konum kullan (manuel koordinatları yok say)
+                    result_text = await tool(use_auto_location=True, longitude=None, latitude=None)
+                    return result_text
+                except Exception as e:
+                    return f"ML öneri aracı hatası: {e}"
                     
             elif function_name == "research_agent_query":
                 query = args.get("query", "")

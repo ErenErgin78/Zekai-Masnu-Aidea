@@ -14,7 +14,7 @@
 .epub
 *.epub
 PDFs/
-
+*.ldb
 # Python
 __pycache__/
 *.py[cod]

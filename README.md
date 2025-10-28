@@ -17,10 +17,10 @@ sunmaktadır.
 Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mimariye sahiptir:
 
 ### 1. Backend (Arka Plan Sistemi)
-- **Toprak Analizi API:** `/soil/analyze` endpoint ile GPS koordinatlarından toprak bilgilerini getirir
-- **Hava Durumu API:** `/weather/current` endpoint ile meteorolojik verileri çeker
-- **ML Tahmin API:** `/ml/predict` endpoint ile Random Forest modeli ürün önerisi yapar
-- **RAG Bilgi API:** `/rag/search` endpoint ile PDF dokümanlardan bilgi arar
+- **Toprak Analizi API:** `/soiltype/analyze` ile koordinatlardan toprak bilgisi
+- **Hava Durumu API:** `/weather/` altındaki uçlarla meteorolojik veriler
+- **ML Öneri API:** `/ml/analyze` ile toprak+iklim verisine göre ürün önerisi
+- **RAG Bilgi**: PDF/doküman tabanlı bilgi çıkarımı (LLM üzerinden kullanılır)
 
 ### 2. Bilgi Bankası (RAG – Retrieval Augmented Generation)
 - Tarım, iklim, gübreleme ve organik üretim konularında dijital PDF/metin içeriklerini işler
@@ -46,6 +46,28 @@ Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mim
 3. **İlgili backend modülleri** çalıştırılır (örneğin ürün tahmini veya hava durumu)
 4. **RAG sistemi** gerekirse bilgi sağlar
 5. **LLM** tüm sonuçları birleştirerek kullanıcıya yanıt verir
+
+## 🌾 Makine Öğrenmesi ile Ürün Önerisi (Güncel)
+
+- Artık sistem, toprak ve iklim verilerini birleştirerek makine öğrenmesi modeliyle ürün önerileri sunar.
+- LLM, kullanıcı “burada hangi bitki yetişir?” gibi sorular sorduğunda otomatik olarak ML aracını kullanır.
+- Konum alma her zaman otomatik yapılır; manuel koordinat gerektirmez.
+- Başlıca özellikler:
+  - Toprak verisi: SoilType API’den alınır
+  - İklim verisi: dahili veri/varsayılanlar ile tamamlanır
+  - Model: arka planda yüklü ML modeli; gerekli durumlarda güvenli kural tabanlı öneriye düşer
+  - Çıktı: “Makine öğrenmesi modeli, toprak ve iklim verilerine göre şu bitkileri önerdi” formatında, güven skorlarıyla birlikte
+
+### Çalıştırma ve Entegrasyon
+
+- LLM başlarken Soil+Weather API (8000) ve ML API (8003) otomatik başlatılır.
+- Frontend/LLM tarafı, ML aracını bir “tool” olarak görür ve gerektiğinde çağırır.
+- Kullanıcı ek ayar yapmadan “hangi ürün yetişir?” gibi sorulara doğrudan öneri alır.
+
+### Kısa Notlar
+
+- ML API rota özeti: `POST /ml/analyze` (arka planda LLM tarafından kullanılır)
+- Güvenli çalışma: Servisler geç cevap verirse kısa zaman aşımları ve otomatik geri dönüşler uygulanır.
 
 ## 🛠️ Teknolojiler
 
@@ -148,77 +170,12 @@ Zekai-Masnu-Aidea/
 └── requirements.txt   # Python bağımlılıkları
 ```
 
-## 🤖 Backend Makine Öğrenmesi
+## 🤖 Backend Makine Öğrenmesi (Özet)
 
-### Crop Recommendation Using Random Forest
-
-**Problem Tanımı:** Bu projenin amacı, tarımsal faktörler (azot, fosfor, potasyum, sıcaklık, nem, pH, yağış miktarı) kullanılarak ekim yapılacak en uygun ürünün tahmin edilmesidir.
-
-### Veri Kümesi Özeti
-
-| Bilgi Türü | Açıklama |
-|-------------|----------|
-| **Toplam Satır (Gözlem)** | 2.200 |
-| **Toplam Sütun (Değişken)** | 8 |
-| **Bağımsız Değişkenler** | 7 adet (N, P, K, Temperature, Humidity, pH, Rainfall) |
-| **Hedef Değişken** | Yetiştirilen ürün türü |
-| **Farklı Etiket (Ürün) Sayısı** | 22 |
-
-### Değişken Açıklamaları
-
-| Değişken Adı | Açıklama |
-|--------------|----------|
-| **N** | Topraktaki azot miktarı |
-| **P** | Topraktaki fosfor miktarı |
-| **K** | Topraktaki potasyum miktarı |
-| **Temperature** | Ortalama Sıcaklık (°C) |
-| **Humidity** | Nem oranı (%) |
-| **pH** | Toprak pH değeri |
-| **Rainfall** | Yağış Miktarı (mm) |
-| **Label** | Yetiştirilen ürün (hedef değişken) |
-
-### Ürün Türleri (22 Adet)
-rice, maize, chickpea, kidneybeans, pigeonpeas, mothbeans, mungbean, blackgram, lentil, pomegranate, banana, mango, grapes, watermelon, muskmelon, apple, orange, papaya, coconut, cotton, jute, coffee
-
-### Veri Hazırlama Süreci
-
-1. **Sütun İsimlerinin Standardizasyonu:** Tüm sütun adları küçük harfe çevrilmiş, boşluklar kaldırılmıştır
-2. **Sayısal Dönüşümler:** Nokta (.) binlik ayırıcı, virgül (,) ise ondalık ayırıcı olarak düzeltilmiştir
-3. **Aykırı Değer Analizi:** Her bir sayısal sütun için Z-score hesaplanmış, 3 standart sapmanın dışındaki veriler tespit edilmiştir
-4. **Hedef Değişken Kontrolü:** label sütunu kategorik formata dönüştürülmüş ve sınıfların dengeli dağıldığı gözlemlenmiştir
-5. **Korelasyon Analizi:** Değişkenler arası ilişkiler incelenmiş, en güçlü korelasyonun nem ve yağış arasında olduğu belirlenmiştir
-
-### Analiz Yöntemi
-
-**Random Forest Classifier** algoritması kullanılmıştır. Random Forest, birden fazla karar ağacını bir araya getirerek (ensemble) genelleme kabiliyeti yüksek bir model oluşturur.
-
-**Kullanılan Adımlar:**
-1. **Veri Ayrımı:** Veri %80 eğitim, %20 test olarak ayrılmıştır
-2. **Model Eğitimi:** Random Forest Classifier ile model eğitilmiştir
-3. **Performans Değerlendirmesi:** Çeşitli metriklerle model performansı ölçülmüştür
-
-### Sonuçlar
-
-- **Doğruluk Oranı:** %93'ün üzerinde
-- **Model Performansı:** Yüksek genelleme kabiliyeti
-- **Veri Kalitesi:** Eksik değer bulunmamıştır
-- **Korelasyon:** Nem ve yağış arasında en güçlü ilişki
-
-### İşlevsel Katkılar
-
-- Tarım planlamasında çiftçilere doğru ürün önerileri sunabilir
-- Sulama, gübreleme ve ekim zamanlamasının optimizasyonuna katkı sağlar
-- Tarım politikalarının veri temelli kararlarla desteklenmesini mümkün kılar
-
-### Kullanılan Araçlar
-
-| Araç | Kullanım Amacı |
-|-------|---------------|
-| **Python** | Genel analiz ve modelleme |
-| **pandas** | Veri işleme |
-| **numpy** | Matematiksel işlemler |
-| **matplotlib/seaborn** | Görselleştirme |
-| **scikit-learn** | Makine öğrenmesi modeli ve metrikler |
+- Ürün önerisi, toprak (SoilType API) ve iklim özellikleri birlikte değerlendirilerek yapılır.
+- LLM, kullanıcı sorusuna göre ML aracını otomatik çağırır; konum otomatik alınır.
+- Model arka planda yüklenir; gerekirse güvenli kural tabanlı öneriyle yanıt verir.
+- Amaç: “Bu bölgede hangi ürünler yetişir?” sorusuna hızlı, anlaşılır ve uygulanabilir öneriler sunmak.
 
 ## 🔗 Entegrasyon Mantığı
 
