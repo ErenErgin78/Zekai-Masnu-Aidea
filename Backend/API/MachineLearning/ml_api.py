@@ -197,8 +197,40 @@ class MLService:
             if resp.status_code != 200:
                 logger.warning(f"SoilType health non-200: {resp.status_code}")
         except Exception as e:
-            logger.error(f"Error getting soil data: {str(e)}")
-            raise Exception(f"Soil data retrieval failed: {str(e)}")
+            logger.warning(f"SoilType health check failed: {e}")
+
+    def _soiltype_post(self, path: str, payload: Dict[str, Any], timeout: tuple[int, int]) -> Dict[str, Any]:
+        url = f"{self.soil_api_base}{path}"
+        last_err: Optional[Exception] = None
+        for attempt in range(2):
+            try:
+                resp = requests.post(url, json=payload, timeout=timeout)
+                resp.raise_for_status()
+                return resp.json()
+            except requests.exceptions.Timeout as e:
+                last_err = e
+                logger.warning(f"SoilType timeout at {url} (attempt {attempt+1}/2)")
+            except requests.exceptions.RequestException as e:
+                last_err = e
+                logger.warning(f"SoilType request error at {url} (attempt {attempt+1}/2): {e}")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"SoilType call failed: {last_err}")
+
+    def _get_soil_data(self, method: str, coords: Optional[Coordinates]) -> Dict[str, Any]:
+        """SoilType API'den toprak verisini alır; auto→manual fallback uygular."""
+        self._soiltype_health_soft()
+        connect_read = (5, 8)
+
+        if method == "Manual" and coords is not None:
+            payload = {"method": "Manual", "longitude": coords.longitude, "latitude": coords.latitude}
+            return self._soiltype_post("/analyze", payload, connect_read)
+
+        # Auto akış: önce auto, başarısızsa TR merkez fallback
+        try:
+            return self._soiltype_post("/analyze/auto", {"method": "Auto"}, connect_read)
+        except HTTPException:
+            fb = {"method": "Manual", "longitude": 35.0, "latitude": 39.0}
+            logger.info("Auto failed; using manual fallback coordinates (TR)")
+            return self._soiltype_post("/analyze", fb, connect_read)
     
     def _extract_soil_features(self, soil_data: Dict[str, Any]) -> Dict[str, float]:
         """Toprak verilerinden model özelliklerini çıkar"""
@@ -356,6 +388,44 @@ class MLService:
             
         except Exception as e:
             logger.warning(f"Climate CSV read warning: {e}")
+        return {}
+
+    def _get_climate_features(self) -> Dict[str, float]:
+        """İklim özellikleri: CSV varsa kullan, aksi halde makul defaultlar."""
+        defaults: Dict[str, float] = {
+            'Ortalama En Yüksek Sıcaklık (°C)_Eylül': 26.0,
+            'Ortalama En Yüksek Sıcaklık (°C)_Aralık': 10.0,
+            'Ortalama En Düşük Sıcaklık (°C)_Ağustos': 18.0,
+            'Ortalama Güneşlenme Süresi (saat)_Ağustos': 10.0,
+            'Ortalama Güneşlenme Süresi (saat)_Aralık': 5.0,
+            'Ortalama Yağışlı Gün Sayısı_Şubat': 10.0,
+            'Ortalama Yağışlı Gün Sayısı_Mart': 9.0,
+            'Ortalama Yağışlı Gün Sayısı_Nisan': 8.0,
+            'Ortalama Yağışlı Gün Sayısı_Ağustos': 2.0,
+            'Ortalama Yağışlı Gün Sayısı_Kasım': 8.0,
+            'Ortalama Yağışlı Gün Sayısı_Yıllık': 90.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Nisan': 45.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Mayıs': 40.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Haziran': 25.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Ağustos': 10.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Eylül': 20.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Ekim': 35.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Aralık': 60.0,
+            'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Yıllık': 550.0
+        }
+        try:
+            if os.path.exists(self.data_path):
+                df = pd.read_csv(self.data_path)
+                if not df.empty:
+                    row = df.sample(n=1).iloc[0]
+                    for k in list(defaults.keys()):
+                        if k in df.columns:
+                            try:
+                                defaults[k] = float(row[k])
+                            except Exception:
+                                pass
+        except Exception as e:
+            logger.warning(f"Climate defaults read warning: {e}")
         return defaults
 
     def _prepare_vector(self, soil_feats: Dict[str, float], climate_feats: Dict[str, float]) -> np.ndarray:
