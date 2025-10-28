@@ -474,8 +474,10 @@ async def soil_endpoint(request: dict):
                             valid_properties[name] = formatted_value
                 
                 # Toprak tipi bilgileri
-                soil_type = classification.get('wrb4_description', 'Bilinmiyor')
-                soil_code = classification.get('wrb4_code', 'N/A')
+                # wrb4_description boşsa wrb2_description'a düş
+                soil_type = classification.get('wrb4_description') or classification.get('wrb2_description') or 'Bilinmiyor'
+                # wrb4_code yoksa wrb2_code'a düş
+                soil_code = classification.get('wrb4_code') or classification.get('wrb2_code') or 'N/A'
                 
                 # Temel bilgileri ekle
                 result = {
