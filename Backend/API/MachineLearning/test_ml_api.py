@@ -1,184 +1,178 @@
-# -*- coding: utf-8 -*-
 """
-ML API Test Dosyası
-==================
+ML & SoilType API Integration Test (No Mocks)
+--------------------------------------------
+Bu script, canlı çalışan API'leri test eder:
+- Main API kök ve health
+- SoilType health ve manuel analiz
+- ML health, Auto analiz ve Manual analiz
 
-Bu dosya ML API'sinin çalışıp çalışmadığını test eder.
+Çalıştırma:
+    python test_ml_api.py
 """
+
+import json
+import sys
+from typing import Any, Dict
 
 import requests
-import json
-import logging
 
-# Logging konfigürasyonu
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-def test_ml_api():
-    """ML API'sini test et"""
-    
-    # API URL'i
-    base_url = "http://localhost:8000"
-    ml_url = f"{base_url}/ml"
-    
-    print("=" * 50)
-    print("ML API Test Başlatılıyor...")
-    print("=" * 50)
-    
-    # 1. Health check testi
-    print("\n1. Health Check Testi:")
-    try:
-        response = requests.get(f"{ml_url}/health")
-        if response.status_code == 200:
-            print("✅ Health check başarılı")
-            print(f"   Yanıt: {response.json()}")
-        else:
-            print(f"❌ Health check başarısız: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Health check hatası: {str(e)}")
-        return False
-    
-    # 2. Otomatik analiz testi
-    print("\n2. Otomatik Analiz Testi:")
-    try:
-        payload = {"method": "Auto"}
-        response = requests.post(f"{ml_url}/analyze", json=payload)
-        
-        if response.status_code == 200:
-            result = response.json()
-            print("✅ Otomatik analiz başarılı")
-            print(f"   Koordinatlar: {result.get('coordinates')}")
-            print(f"   Öneri sayısı: {len(result.get('recommendations', []))}")
-            
-            # Model durumunu göster
-            model_info = result.get('model_info', {})
-            if model_info.get('fallback_mode'):
-                print("   ⚠️  Fallback mode aktif - Model dosyası bozuk")
-                print(f"   Model durumu: {model_info.get('model_status')}")
-            else:
-                print("   ✅ Model aktif")
-                print(f"   Model tipi: {model_info.get('model_type')}")
-                print(f"   Scaler tipi: {model_info.get('scaler_type')}")
-                if model_info.get('metadata'):
-                    print(f"   Metadata: {model_info.get('metadata')}")
-            
-            # İlk 3 öneriyi göster
-            recommendations = result.get('recommendations', [])
-            if recommendations:
-                print("   En iyi öneriler:")
-                for i, rec in enumerate(recommendations[:3], 1):
-                    print(f"     {i}. {rec['plant_name']} - Güven: %{rec['confidence_score']}")
-        else:
-            print(f"❌ Otomatik analiz başarısız: {response.status_code}")
-            print(f"   Hata: {response.text}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Otomatik analiz hatası: {str(e)}")
-        return False
-    
-    # 3. Manuel analiz testi
-    print("\n3. Manuel Analiz Testi:")
-    try:
-        payload = {
-            "method": "Manual",
-            "coordinates": {
-                "longitude": 35.0,
-                "latitude": 40.0
-            }
-        }
-        response = requests.post(f"{ml_url}/analyze", json=payload)
-        
-        if response.status_code == 200:
-            result = response.json()
-            print("✅ Manuel analiz başarılı")
-            print(f"   Koordinatlar: {result.get('coordinates')}")
-            print(f"   Öneri sayısı: {len(result.get('recommendations', []))}")
-            
-            # Model durumunu göster
-            model_info = result.get('model_info', {})
-            if model_info.get('fallback_mode'):
-                print("   ⚠️  Fallback mode aktif - Model dosyası bozuk")
-                print(f"   Model durumu: {model_info.get('model_status')}")
-            else:
-                print("   ✅ Model aktif")
-                print(f"   Model tipi: {model_info.get('model_type')}")
-                print(f"   Scaler tipi: {model_info.get('scaler_type')}")
-                if model_info.get('metadata'):
-                    print(f"   Metadata: {model_info.get('metadata')}")
-            
-            # İlk 3 öneriyi göster
-            recommendations = result.get('recommendations', [])
-            if recommendations:
-                print("   En iyi öneriler:")
-                for i, rec in enumerate(recommendations[:3], 1):
-                    print(f"     {i}. {rec['plant_name']} - Güven: %{rec['confidence_score']}")
-        else:
-            print(f"❌ Manuel analiz başarısız: {response.status_code}")
-            print(f"   Hata: {response.text}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Manuel analiz hatası: {str(e)}")
-        return False
-    
-    print("\n" + "=" * 50)
-    print("✅ Tüm testler başarılı!")
-    print("=" * 50)
-    return True
+BASE_URL = "http://localhost:8000"          # Main + SoilType
+SOIL_BASE = f"{BASE_URL}/soiltype"
+ML_BASE = "http://localhost:8003/ml"         # ML standalone (8003)
 
-def test_soil_api():
-    """SoilType API'sinin çalışıp çalışmadığını test et"""
-    
-    print("\n" + "=" * 50)
-    print("SoilType API Testi...")
-    print("=" * 50)
-    
+# Kısa timeoutları merkezi tanımla
+TIMEOUT_GET = 5
+TIMEOUT_POST = (5, 8)       # (connect, read) for SoilType/Main
+TIMEOUT_POST_ML = (5, 25)   # ML analyze can take longer due to internal fallbacks
+
+
+def get(url: str) -> requests.Response:
+    """GET isteği (kısa timeout ve basit hata yakalama)."""
     try:
-        # SoilType API health check
-        response = requests.get("http://localhost:8000/soiltype/health")
-        if response.status_code == 200:
-            print("✅ SoilType API çalışıyor")
-        else:
-            print(f"❌ SoilType API sorunu: {response.status_code}")
-            return False
-            
-        # Otomatik analiz testi
-        payload = {"method": "Auto"}
-        response = requests.post("http://localhost:8000/soiltype/analyze/auto", json=payload)
-        
-        if response.status_code == 200:
-            result = response.json()
-            print("✅ SoilType otomatik analiz başarılı")
-            print(f"   Koordinatlar: {result.get('coordinates')}")
-            print(f"   Toprak ID: {result.get('soil_id')}")
-        else:
-            print(f"❌ SoilType analiz başarısız: {response.status_code}")
-            return False
-            
+        return requests.get(url, timeout=TIMEOUT_GET)
     except Exception as e:
-        print(f"❌ SoilType API hatası: {str(e)}")
+        print(f"GET error: {url} -> {e}")
+        raise
+
+
+def post(url: str, payload: Dict[str, Any]) -> requests.Response:
+    """POST isteği (kısa timeout ve basit hata yakalama)."""
+    try:
+        # Route ML calls to longer timeout
+        timeout = TIMEOUT_POST_ML if "/ml/" in url else TIMEOUT_POST
+        return requests.post(url, json=payload, timeout=timeout)
+    except Exception as e:
+        print(f"POST error: {url} -> {e}")
+        raise
+
+
+def pretty(obj: Any) -> str:
+    """JSON çıktısını okunabilir yazdır."""
+    try:
+        return json.dumps(obj, ensure_ascii=False, indent=2)
+    except Exception:
+        return str(obj)
+
+
+def check_main_health() -> bool:
+    print("\n1) Main API Health")
+    try:
+        r = get(f"{BASE_URL}/health")
+        print(f"HTTP {r.status_code}")
+        if r.ok:
+            print(pretty(r.json()))
+            return True
+        print(r.text)
         return False
-    
-    return True
+    except Exception:
+        return False
+
+
+def check_soil_health() -> bool:
+    print("\n2) SoilType Health")
+    try:
+        r = get(f"{SOIL_BASE}/health")
+        print(f"HTTP {r.status_code}")
+        if r.ok:
+            print(pretty(r.json()))
+            return True
+        print(r.text)
+        return False
+    except Exception:
+        return False
+
+
+def check_ml_health() -> bool:
+    print("\n3) ML API Health")
+    try:
+        r = get(f"{ML_BASE}/health")
+        print(f"HTTP {r.status_code}")
+        if r.ok:
+            print(pretty(r.json()))
+            return True
+        print(r.text)
+        return False
+    except Exception:
+        return False
+
+
+def soil_manual_test(longitude: float = 35.0, latitude: float = 39.0) -> bool:
+    print("\n4) SoilType Manual Analyze")
+    payload = {"method": "Manual", "longitude": longitude, "latitude": latitude}
+    try:
+        r = post(f"{SOIL_BASE}/analyze", payload)
+        print(f"HTTP {r.status_code}")
+        if r.ok:
+            data = r.json()
+            print(pretty({k: data.get(k) for k in ["success", "soil_id", "coordinates", "classification"]}))
+            return True
+        print(r.text)
+        return False
+    except Exception:
+        return False
+
+
+def ml_auto_test() -> bool:
+    print("\n5) ML Analyze (Auto)")
+    payload = {"method": "Auto"}
+    try:
+        r = post(f"{ML_BASE}/analyze", payload)
+        print(f"HTTP {r.status_code}")
+        if r.ok:
+            data = r.json()
+            print(pretty({k: data.get(k) for k in ["success", "coordinates", "recommendations", "model_info"]}))
+            return True
+        print(r.text)
+        return False
+    except Exception:
+        return False
+
+
+def ml_manual_test(longitude: float = 35.0, latitude: float = 39.0) -> bool:
+    print("\n6) ML Analyze (Manual)")
+    payload = {"method": "Manual", "coordinates": {"longitude": longitude, "latitude": latitude}}
+    try:
+        r = post(f"{ML_BASE}/analyze", payload)
+        print(f"HTTP {r.status_code}")
+        if r.ok:
+            data = r.json()
+            print(pretty({k: data.get(k) for k in ["success", "coordinates", "recommendations", "model_info"]}))
+            return True
+        print(r.text)
+        return False
+    except Exception:
+        return False
+
+
+def main() -> int:
+    print("\n=== ML & SoilType Integration Test (No Mocks) ===")
+    ok_main = check_main_health()
+    ok_soil = check_soil_health()
+    ok_ml = check_ml_health()
+
+    # Soil manual zorunlu: SoilType'ın gerçekten çalıştığını doğrular
+    ok_soil_manual = soil_manual_test()
+
+    # ML Auto ve Manual
+    ok_ml_auto = ml_auto_test()
+    ok_ml_manual = ml_manual_test()
+
+    all_ok = all([ok_main, ok_soil, ok_ml, ok_soil_manual, ok_ml_auto or ok_ml_manual])
+
+    print("\n--- Summary ---")
+    print(f"Main Health:        {'OK' if ok_main else 'FAIL'}")
+    print(f"SoilType Health:    {'OK' if ok_soil else 'FAIL'}")
+    print(f"ML Health:          {'OK' if ok_ml else 'FAIL'}")
+    print(f"Soil Manual:        {'OK' if ok_soil_manual else 'FAIL'}")
+    print(f"ML Auto:            {'OK' if ok_ml_auto else 'FAIL'}")
+    print(f"ML Manual:          {'OK' if ok_ml_manual else 'FAIL'}")
+
+    return 0 if all_ok else 1
+
 
 if __name__ == "__main__":
-    print("ML API Test Suite")
-    print("Bu test ML API'sinin ve bağımlılıklarının çalışıp çalışmadığını kontrol eder.")
-    print("\nNot: Test öncesi API'nin çalıştığından emin olun:")
-    print("   python -m uvicorn Backend.API.main:app --reload")
-    
-    # SoilType API testi
-    soil_ok = test_soil_api()
-    
-    if soil_ok:
-        # ML API testi
-        ml_ok = test_ml_api()
-        
-        if ml_ok:
-            print("\n🎉 Tüm sistemler çalışıyor!")
-        else:
-            print("\n❌ ML API'de sorun var")
-    else:
-        print("\n❌ SoilType API'de sorun var, ML API test edilemiyor")
+    # Script'i çalıştıran kullanıcıya exit code ile sonuç bildir
+    sys.exit(main())
+
+

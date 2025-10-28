@@ -1,78 +1,84 @@
 # -*- coding: utf-8 -*-
 """
-Machine Learning API - Bitki Önerisi Sistemi
-============================================
+Machine Learning API (Router Only)
+==================================
 
-Bu API, koordinat bilgilerine göre toprak analizi yaparak
-makine öğrenmesi modeli ile bitki önerileri sunar.
+Bu dosya yalnızca FastAPI router'ını tanımlar ve `Backend/API/main.py` içinde
+`app.include_router(...)` ile bağlanır. Kendi başına server başlatmaz; böylece
+port çakışması yaşanmaz ve diğer API'lerle (SoilType, Weather) uyumlu çalışır.
 
 Özellikler:
-- SoilType API'sinden toprak verilerini alır
-- Koordinat eşleştirme ile iklim verilerini bulur
-- ML modeli ile bitki önerileri yapar
-- Dinamik dosya yolları kullanır
-- Kapsamlı hata yönetimi ve loglama
-
-Author: ML Analysis System
-Version: 1.0.0
+- LLM entegrasyonuna uygun tek endpoint: POST /ml/analyze
+- SoilType API ile dayanıklı entegrasyon (yumuşak health-check, kısa timeout, fallback)
+- Model yükleme (pickle/joblib) + güvenli kural tabanlı fallback
+- Koordinat validasyonu, -9/NA korumaları, kısa ve açıklayıcı loglar
 """
 
 import os
-import sys
-import json
-import logging
 import pickle
-import pandas as pd
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+import pandas as pd
 import requests
-from typing import Dict, List, Optional, Any, Tuple
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
-import math
+
 
 # Logging konfigürasyonu
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# FastAPI router oluştur
+
+# FastAPI Router (yalnızca router, server başlatmaz)
 router = APIRouter(prefix="/ml", tags=["Machine Learning"])
 
-# Pydantic modelleri
+
+# ---------- Pydantic Modelleri ----------
+class Coordinates(BaseModel):
+    """Koordinat verisi modeli (enlem/boylam doğrulaması içerir)."""
+    longitude: float
+    latitude: float
+
+    @field_validator('longitude')
+    @classmethod
+    def validate_longitude(cls, v: float) -> float:
+        if not (-180 <= v <= 180):
+            raise ValueError('Longitude must be between -180 and 180')
+        return float(v)
+
+    @field_validator('latitude')
+    @classmethod
+    def validate_latitude(cls, v: float) -> float:
+        if not (-90 <= v <= 90):
+            raise ValueError('Latitude must be between -90 and 90')
+        return float(v)
+
+
 class MLRequest(BaseModel):
-    """ML analizi için istek modeli"""
-    method: str = Field(..., description="Method type", example="Auto")
-    coordinates: Optional[Dict[str, float]] = Field(None, description="Koordinat bilgileri")
-    
+    """ML analizi için istek modeli (LLM entegrasyonuyla uyumlu)."""
+    method: str = Field(..., description="'Auto' veya 'Manual'")
+    coordinates: Optional[Coordinates] = Field(None, description="Manual mod için koordinatlar")
+
     @field_validator('method')
     @classmethod
-    def validate_method(cls, v):
-        if v.lower() not in ['auto', 'manual']:
+    def validate_method(cls, v: str) -> str:
+        if v.lower() not in ["auto", "manual"]:
             raise ValueError('Method must be "Auto" or "Manual"')
         return v.title()
-    
-    @field_validator('coordinates')
-    @classmethod
-    def validate_coordinates(cls, v):
-        if v is not None:
-            if 'longitude' not in v or 'latitude' not in v:
-                raise ValueError('Coordinates must contain longitude and latitude')
-            lon, lat = v['longitude'], v['latitude']
-            if not (-180 <= lon <= 180) or not (-90 <= lat <= 90):
-                raise ValueError('Invalid coordinate ranges')
-        return v
+
 
 class PlantRecommendation(BaseModel):
-    """Bitki önerisi modeli"""
+    """Bitki önerisi nesnesi."""
     plant_name: str
     confidence_score: float
     probability: float
 
+
 class MLAnalysisResponse(BaseModel):
-    """ML analizi yanıt modeli"""
+    """ML analizi yanıt modeli."""
     success: bool
     message: str
     timestamp: datetime
@@ -82,112 +88,67 @@ class MLAnalysisResponse(BaseModel):
     recommendations: List[PlantRecommendation]
     model_info: Dict[str, Any]
 
-class ErrorResponse(BaseModel):
-    """Hata yanıt modeli"""
-    success: bool = False
-    error: str
-    timestamp: datetime
-    details: Optional[str] = None
 
+# ---------- Servis Sınıfı ----------
 class MLService:
-    """Makine öğrenmesi servis sınıfı"""
-    
-    def __init__(self):
-        """Servis başlatıcı - dosya yollarını dinamik olarak belirle"""
+    """ML servis katmanı: model yükleme, özellik hazırlama ve tahmin."""
+
+    def __init__(self) -> None:
+        # Dosya yollarını güvenli biçimde ayarla
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.model_path = os.path.join(self.script_dir, 'Model', 'model.pkl')
+        self.data_path = os.path.join(self.script_dir, 'Data', 'final5.csv')
+        self.soil_api_base = "http://localhost:8000/soiltype"
+
+        # Modeli yükle (pickle→joblib) ve fallback flag'i belirle
+        self.model: Optional[Any] = None
+        self.scaler: Optional[Any] = None
+        self.metadata: Dict[str, Any] = {}
+        self.fallback_mode: bool = False
+
+        self._load_model_safe()
+        self.feature_columns = self._define_feature_columns()
+
+    def _load_model_safe(self) -> None:
+        """Modeli yükler; başarısızsa kural tabanlı fallback'a geçer."""
         try:
-            # Dinamik dosya yolu belirleme
-            self.script_dir = os.path.dirname(os.path.abspath(__file__))
-            
-            # Model dosyası yolu
-            self.model_path = os.path.join(self.script_dir, 'Model', 'model.pkl')
-            
-            # Veri dosyası yolu
-            self.data_path = os.path.join(self.script_dir, 'Data', 'final5.csv')
-            
-            # SoilType API URL'i
-            self.soil_api_url = "http://localhost:8000/soiltype/analyze/auto"
-            
-            # Dosya varlığını kontrol et
-            self._validate_files()
-            
-            # Modeli yükle
-            self.model_data = self._load_model()
-            self.fallback_mode = self.model_data is None
-            
-            if self.model_data:
-                self.model = self.model_data.get('model')
-                self.scaler = self.model_data.get('scaler')
-                self.metadata = self.model_data.get('metadata', {})
-            else:
-                self.model = None
-                self.scaler = None
-                self.metadata = {}
-            
-            # Veri sütunlarını belirle
-            self.feature_columns = self._get_feature_columns()
-            
-            if self.fallback_mode:
-                logger.warning("ML Service initialized in FALLBACK MODE - Model file is corrupted")
-                logger.warning("Please fix the model.pkl file for proper ML predictions")
-            else:
-                logger.info("ML Service initialized successfully")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize ML Service: {str(e)}")
-            raise Exception(f"ML Service initialization failed: {str(e)}")
-    
-    def _validate_files(self):
-        """Gerekli dosyaların varlığını kontrol et"""
-        if not os.path.exists(self.model_path):
-            raise FileNotFoundError(f"Model file not found: {self.model_path}")
-        
-        if not os.path.exists(self.data_path):
-            raise FileNotFoundError(f"Data file not found: {self.data_path}")
-        
-        logger.info(f"Model path: {self.model_path}")
-        logger.info(f"Data path: {self.data_path}")
-    
-    def _load_model(self):
-        """ML modelini yükle"""
-        try:
-            # Önce pickle ile dene
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(f"Model file not found: {self.model_path}")
+
             try:
                 with open(self.model_path, 'rb') as f:
                     model_data = pickle.load(f)
-                logger.info("Model loaded successfully with pickle")
-            except Exception as pickle_error:
-                logger.warning(f"Pickle loading failed: {str(pickle_error)}")
-                # Joblib ile dene
+                logger.info("Model loaded via pickle")
+            except Exception as pick_err:
                 try:
                     import joblib
                     model_data = joblib.load(self.model_path)
-                    logger.info("Model loaded successfully with joblib")
-                except Exception as joblib_error:
-                    logger.error(f"Joblib loading also failed: {str(joblib_error)}")
-                    raise Exception(f"Both pickle and joblib failed: {str(pickle_error)}")
-            
-            # Model verisi dictionary ise içindeki modeli al
+                    logger.info("Model loaded via joblib")
+                except Exception as job_err:
+                    raise RuntimeError(f"Model load failed: {pick_err} | {job_err}")
+
             if isinstance(model_data, dict):
-                if 'model' in model_data:
-                    logger.info("Model data is dictionary, extracting 'model' key")
-                    return model_data  # Tüm dictionary'yi döndür (model, scaler, metadata)
-                else:
-                    logger.warning("Dictionary does not contain 'model' key")
-                    return None
+                self.model = model_data.get('model')
+                self.scaler = model_data.get('scaler')
+                self.metadata = model_data.get('metadata', {})
             else:
-                # Direkt model ise
-                logger.info("Model data is direct model object")
-                return {'model': model_data, 'scaler': None, 'metadata': {}}
-                
+                self.model = model_data
+                self.scaler = None
+                self.metadata = {}
+
+            self.fallback_mode = self.model is None
+            if self.fallback_mode:
+                logger.warning("Model object is None; entering fallback mode")
         except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
-            logger.warning("Model file appears to be corrupted. Using fallback mode.")
-            return None  # Fallback mode için None döndür
-    
-    def _get_feature_columns(self):
-        """Model için gerekli özellik sütunlarını belirle"""
-        # Model eğitiminde kullanılan sütunlar
-        feature_columns = [
+            logger.error(f"Model initialization failed: {e}")
+            self.model = None
+            self.scaler = None
+            self.metadata = {"status": "load_failed"}
+            self.fallback_mode = True
+
+    def _define_feature_columns(self) -> List[str]:
+        """Model eğitimi sırasında kullanılan sütun isimleri (sıra korunur)."""
+        cols = [
             'wrb4_code', 'physical_available_water_capacity', 'basic_organic_carbon',
             'basic_c/n_ratio', 'texture_clay', 'texture_sand', 'texture_coarse_fragments',
             'physical_reference_bulk_density', 'chemical_cation_exchange_capacity',
@@ -209,42 +170,32 @@ class MLService:
             'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Aralık',
             'Aylık Toplam Yağış Miktarı Ortalaması (mm)_Yıllık'
         ]
-        
-        logger.info(f"Feature columns defined: {len(feature_columns)} columns")
-        return feature_columns
-    
-    def _get_soil_data_from_api(self, coordinates: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
-        """SoilType API'sinden toprak verilerini al"""
+        return cols
+
+    @staticmethod
+    def _json_safe(value: Any) -> Any:
+        """Yanıtta JSON'a serilemeyen türleri güvenli string'e çevirir (rekürsif)."""
         try:
-            # API isteği hazırla
-            if coordinates:
-                # Manuel koordinat kullan
-                payload = {
-                    "method": "Manual",
-                    "longitude": coordinates['longitude'],
-                    "latitude": coordinates['latitude']
-                }
-                api_url = "http://localhost:8000/soiltype/analyze"
-            else:
-                # Otomatik konum tespiti
-                payload = {"method": "Auto"}
-                api_url = self.soil_api_url
-            
-            logger.info(f"Requesting soil data from API: {api_url}")
-            logger.info(f"Payload: {payload}")
-            
-            # API isteği gönder
-            response = requests.post(api_url, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            soil_data = response.json()
-            logger.info("Soil data retrieved successfully from API")
-            
-            return soil_data
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"API request failed: {str(e)}")
-            raise Exception(f"SoilType API request failed: {str(e)}")
+            if value is None or isinstance(value, (str, int, float, bool)):
+                return value
+            if isinstance(value, dict):
+                return {str(k): MLService._json_safe(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple, set)):
+                return [MLService._json_safe(v) for v in value]
+            try:
+                return str(value)
+            except Exception:
+                return f"<{type(value).__name__}>"
+        except Exception:
+            return f"<{type(value).__name__}>"
+
+    # ---------- SoilType Entegrasyonu ----------
+    def _soiltype_health_soft(self) -> None:
+        """Health kontrolü yumuşak: başarısız olsa bile akış devam eder."""
+        try:
+            resp = requests.get(f"{self.soil_api_base}/health", timeout=15)
+            if resp.status_code != 200:
+                logger.warning(f"SoilType health non-200: {resp.status_code}")
         except Exception as e:
             logger.error(f"Error getting soil data: {str(e)}")
             raise Exception(f"Soil data retrieval failed: {str(e)}")
@@ -404,41 +355,21 @@ class MLService:
             return climate_features
             
         except Exception as e:
-            logger.error(f"Error finding climate data: {str(e)}")
-            raise Exception(f"Climate data retrieval failed: {str(e)}")
-    
-    def _prepare_features(self, soil_features: Dict[str, float], climate_features: Dict[str, float]) -> np.ndarray:
-        """Model için özellik vektörünü hazırla"""
-        try:
-            # Tüm özellikleri birleştir
-            all_features = {**soil_features, **climate_features}
-            
-            # Model sütunlarına göre sırala
-            feature_vector = []
-            for col in self.feature_columns:
-                value = all_features.get(col, 0.0)
-                feature_vector.append(float(value))
-            
-            # NumPy array'e çevir
-            feature_array = np.array(feature_vector).reshape(1, -1)
-            
-            # Scaler varsa veriyi normalize et
-            if self.scaler is not None:
-                try:
-                    feature_array = self.scaler.transform(feature_array)
-                    logger.info("Features scaled using StandardScaler")
-                except Exception as scale_error:
-                    logger.warning(f"Scaling failed: {str(scale_error)}, using raw features")
-            
-            logger.info(f"Prepared feature vector with shape: {feature_array.shape}")
-            return feature_array
-            
-        except Exception as e:
-            logger.error(f"Error preparing features: {str(e)}")
-            raise Exception(f"Feature preparation failed: {str(e)}")
-    
-    def _get_plant_names(self) -> List[str]:
-        """Bitki isimlerini al"""
+            logger.warning(f"Climate CSV read warning: {e}")
+        return defaults
+
+    def _prepare_vector(self, soil_feats: Dict[str, float], climate_feats: Dict[str, float]) -> np.ndarray:
+        merged: Dict[str, float] = {**climate_feats, **soil_feats}
+        vec = [float(merged.get(col, 0.0)) for col in self.feature_columns]
+        arr = np.array(vec, dtype=float).reshape(1, -1)
+        if self.scaler is not None:
+            try:
+                arr = self.scaler.transform(arr)
+            except Exception as e:
+                logger.warning(f"Scaler transform failed: {e}")
+        return arr
+
+    def _plant_names(self) -> List[str]:
         return [
             'Arpa', 'Ayçiçeği', 'Badem', 'Biber', 'Buğday', 'Ceviz', 'Domates', 'Elma',
             'Fasulye', 'Fındık', 'Fıstık', 'Gül', 'Haşhaş', 'Kayısı', 'Kiraz', 'Kivi',
@@ -446,278 +377,176 @@ class MLService:
             'Patlıcan', 'Pirinç', 'Sarımsak', 'Sebze', 'Turunçgiller', 'Tütün', 'Yer Fıstığı',
             'Zeytin', 'Çay', 'Çilek', 'Üzüm', 'İncir', 'Şeftali', 'Şeker Pancarı', 'Şerbetçi Otu'
         ]
-    
-    def _make_prediction(self, features: np.ndarray) -> List[PlantRecommendation]:
-        """Model ile tahmin yap veya fallback mode kullan"""
+
+    def _predict(self, X: np.ndarray) -> List[PlantRecommendation]:
+        if self.fallback_mode or self.model is None:
+            return self._fallback_recommendations(X)
         try:
-            if self.fallback_mode:
-                return self._make_fallback_prediction(features)
-            
-            # Model tahmini yap
             if hasattr(self.model, 'predict_proba'):
-                probabilities = self.model.predict_proba(features)[0]
+                probs = self.model.predict_proba(X)[0]
             else:
-                # Eğer predict_proba yoksa, predict kullan
-                prediction = self.model.predict(features)[0]
-                probabilities = np.zeros(len(self._get_plant_names()))
-                probabilities[prediction] = 1.0
-            
-            # Bitki isimlerini al
-            plant_names = self._get_plant_names()
-            
-            # Önerileri hazırla
-            recommendations = []
-            for i, (plant_name, prob) in enumerate(zip(plant_names, probabilities)):
-                if prob > 0.1:  # Sadece %10'dan yüksek olasılıkları dahil et
-                    confidence = min(prob * 100, 100)  # Yüzde olarak
-                    recommendations.append(PlantRecommendation(
-                        plant_name=plant_name,
-                        confidence_score=round(confidence, 2),
-                        probability=round(prob, 4)
-                    ))
-            
-            # Güven skoruna göre sırala
-            recommendations.sort(key=lambda x: x.confidence_score, reverse=True)
-            
-            # En iyi 5 öneriyi al
-            recommendations = recommendations[:5]
-            
-            logger.info(f"Generated {len(recommendations)} plant recommendations")
-            return recommendations
-            
+                pred = int(self.model.predict(X)[0])
+                probs = np.zeros(len(self._plant_names()), dtype=float)
+                probs[pred] = 1.0
+            names = self._plant_names()
+            recs: List[PlantRecommendation] = []
+            for name, p in zip(names, probs):
+                if p > 0.1:
+                    recs.append(PlantRecommendation(plant_name=name, confidence_score=round(float(p) * 100, 2), probability=round(float(p), 4)))
+            recs.sort(key=lambda r: r.confidence_score, reverse=True)
+            return recs[:5]
         except Exception as e:
-            logger.error(f"Error making prediction: {str(e)}")
-            raise Exception(f"Prediction failed: {str(e)}")
-    
-    def _make_fallback_prediction(self, features: np.ndarray) -> List[PlantRecommendation]:
-        """Fallback mode - basit kurallar tabanlı öneriler"""
-        try:
-            logger.info("Using fallback prediction mode - simple rule-based recommendations")
-            
-            # Özellik değerlerini al
-            feature_dict = dict(zip(self.feature_columns, features[0]))
-            
-            recommendations = []
-            
-            # Basit kurallar tabanlı öneriler
-            # Toprak tipine göre öneriler
-            wrb4_code = feature_dict.get('wrb4_code', 21)
-            
-            if wrb4_code in [17, 18, 19]:  # Chernozems, Kastanozems, Phaeozems
-                recommendations.extend([
-                    PlantRecommendation(plant_name="Buğday", confidence_score=85.0, probability=0.85),
-                    PlantRecommendation(plant_name="Arpa", confidence_score=80.0, probability=0.80),
-                    PlantRecommendation(plant_name="Ayçiçeği", confidence_score=75.0, probability=0.75),
-                    PlantRecommendation(plant_name="Mısır", confidence_score=70.0, probability=0.70),
-                    PlantRecommendation(plant_name="Şeker Pancarı", confidence_score=65.0, probability=0.65)
-                ])
-            elif wrb4_code in [28, 29]:  # Luvisols, Cambisols
-                recommendations.extend([
-                    PlantRecommendation(plant_name="Pamuk", confidence_score=85.0, probability=0.85),
-                    PlantRecommendation(plant_name="Mısır", confidence_score=80.0, probability=0.80),
-                    PlantRecommendation(plant_name="Domates", confidence_score=75.0, probability=0.75),
-                    PlantRecommendation(plant_name="Biber", confidence_score=70.0, probability=0.70),
-                    PlantRecommendation(plant_name="Patates", confidence_score=65.0, probability=0.65)
-                ])
-            elif wrb4_code in [21, 22]:  # Du, Gy
-                recommendations.extend([
-                    PlantRecommendation(plant_name="Zeytin", confidence_score=85.0, probability=0.85),
-                    PlantRecommendation(plant_name="Üzüm", confidence_score=80.0, probability=0.80),
-                    PlantRecommendation(plant_name="Badem", confidence_score=75.0, probability=0.75),
-                    PlantRecommendation(plant_name="Kayısı", confidence_score=70.0, probability=0.70),
-                    PlantRecommendation(plant_name="Şeftali", confidence_score=65.0, probability=0.65)
-                ])
-            else:  # Diğer toprak tipleri için genel öneriler
-                recommendations.extend([
-                    PlantRecommendation(plant_name="Buğday", confidence_score=80.0, probability=0.80),
-                    PlantRecommendation(plant_name="Arpa", confidence_score=75.0, probability=0.75),
-                    PlantRecommendation(plant_name="Mısır", confidence_score=70.0, probability=0.70),
-                    PlantRecommendation(plant_name="Patates", confidence_score=65.0, probability=0.65),
-                    PlantRecommendation(plant_name="Fasulye", confidence_score=60.0, probability=0.60)
-                ])
-            
-            # İklim koşullarına göre ayarlama
-            avg_temp_sep = feature_dict.get('Ortalama En Yüksek Sıcaklık (°C)_Eylül', 25)
-            avg_temp_dec = feature_dict.get('Ortalama En Yüksek Sıcaklık (°C)_Aralık', 10)
-            annual_rainfall = feature_dict.get('Aylık Toplam Yağış Miktarı Ortalaması (mm)_Yıllık', 500)
-            
-            # Sıcak iklim için ek öneriler
-            if avg_temp_sep > 30:
-                recommendations.append(PlantRecommendation(plant_name="Pamuk", confidence_score=90.0, probability=0.90))
-                recommendations.append(PlantRecommendation(plant_name="Mısır", confidence_score=85.0, probability=0.85))
-            
-            # Soğuk iklim için ek öneriler
-            if avg_temp_dec < 5:
-                recommendations.append(PlantRecommendation(plant_name="Arpa", confidence_score=90.0, probability=0.90))
-                recommendations.append(PlantRecommendation(plant_name="Patates", confidence_score=85.0, probability=0.85))
-            
-            # Kurak iklim için ek öneriler
-            if annual_rainfall < 400:
-                recommendations.append(PlantRecommendation(plant_name="Zeytin", confidence_score=90.0, probability=0.90))
-                recommendations.append(PlantRecommendation(plant_name="Badem", confidence_score=85.0, probability=0.85))
-            
-            # Nemli iklim için ek öneriler
-            if annual_rainfall > 800:
-                recommendations.append(PlantRecommendation(plant_name="Çay", confidence_score=90.0, probability=0.90))
-                recommendations.append(PlantRecommendation(plant_name="Fındık", confidence_score=85.0, probability=0.85))
-            
-            # Güven skoruna göre sırala ve tekrarları kaldır
-            seen_plants = set()
-            unique_recommendations = []
-            for rec in sorted(recommendations, key=lambda x: x.confidence_score, reverse=True):
-                if rec.plant_name not in seen_plants:
-                    unique_recommendations.append(rec)
-                    seen_plants.add(rec.plant_name)
-            
-            # En iyi 5 öneriyi al
-            final_recommendations = unique_recommendations[:5]
-            
-            logger.info(f"Generated {len(final_recommendations)} fallback recommendations")
-            return final_recommendations
-            
-        except Exception as e:
-            logger.error(f"Error in fallback prediction: {str(e)}")
-            # Son çare öneriler
-            return [
-                PlantRecommendation(plant_name="Buğday", confidence_score=70.0, probability=0.70),
-                PlantRecommendation(plant_name="Arpa", confidence_score=65.0, probability=0.65),
-                PlantRecommendation(plant_name="Mısır", confidence_score=60.0, probability=0.60),
-                PlantRecommendation(plant_name="Patates", confidence_score=55.0, probability=0.55),
-                PlantRecommendation(plant_name="Fasulye", confidence_score=50.0, probability=0.50)
+            logger.error(f"Model prediction failed: {e}")
+            return self._fallback_recommendations(X)
+
+    def _fallback_recommendations(self, X: np.ndarray) -> List[PlantRecommendation]:
+        feats = dict(zip(self.feature_columns, X[0]))
+        wrb = int(round(float(feats.get('wrb4_code', 21))))
+        annual_rain = float(feats.get('Aylık Toplam Yağış Miktarı Ortalaması (mm)_Yıllık', 550))
+        sep_max = float(feats.get('Ortalama En Yüksek Sıcaklık (°C)_Eylül', 26))
+        dec_max = float(feats.get('Ortalama En Yüksek Sıcaklık (°C)_Aralık', 10))
+
+        recs: List[PlantRecommendation] = []
+        if wrb in [17, 18, 19]:
+            recs += [
+                PlantRecommendation(plant_name="Buğday", confidence_score=85.0, probability=0.85),
+                PlantRecommendation(plant_name="Arpa", confidence_score=80.0, probability=0.80),
+                PlantRecommendation(plant_name="Ayçiçeği", confidence_score=75.0, probability=0.75),
+                PlantRecommendation(plant_name="Mısır", confidence_score=70.0, probability=0.70),
+                PlantRecommendation(plant_name="Şeker Pancarı", confidence_score=65.0, probability=0.65)
             ]
-    
-    def analyze_and_recommend(self, request: MLRequest) -> MLAnalysisResponse:
-        """Tam analiz ve öneri süreci"""
-        try:
-            logger.info(f"Starting ML analysis with method: {request.method}")
-            
-            # Koordinatları belirle
-            if request.method == "Manual" and request.coordinates:
-                coordinates = request.coordinates
-            else:
-                # Otomatik konum tespiti için koordinatları None gönder
-                coordinates = None
-            
-            # Toprak verilerini al
-            soil_data = self._get_soil_data_from_api(coordinates)
-            
-            # Kullanılan koordinatları al
-            used_coordinates = soil_data.get('coordinates', {'longitude': 0.0, 'latitude': 0.0})
-            
-            # Toprak özelliklerini çıkar
-            soil_features = self._extract_soil_features(soil_data)
-            
-            # İklim verilerini bul
-            climate_features = self._find_closest_climate_data(used_coordinates)
-            
-            # Özellik vektörünü hazırla
-            feature_vector = self._prepare_features(soil_features, climate_features)
-            
-            # Tahmin yap
-            recommendations = self._make_prediction(feature_vector)
-            
-            # Model bilgilerini hazırla
-            model_info = {
-                "model_type": type(self.model).__name__ if self.model else "Fallback Rules",
-                "scaler_type": type(self.scaler).__name__ if self.scaler else "None",
-                "feature_count": len(self.feature_columns),
-                "recommendation_count": len(recommendations),
-                "fallback_mode": self.fallback_mode,
-                "model_status": "Active" if not self.fallback_mode else "Corrupted - Using fallback rules",
-                "metadata": self.metadata
-            }
-            
-            return MLAnalysisResponse(
-                success=True,
-                message="ML analysis completed successfully",
-                timestamp=datetime.now(),
-                coordinates=used_coordinates,
-                soil_data=soil_features,
-                climate_data=climate_features,
-                recommendations=recommendations,
-                model_info=model_info
-            )
-            
-        except Exception as e:
-            logger.error(f"ML analysis failed: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"ML analysis failed: {str(e)}"
-            )
+        elif wrb in [28, 29]:
+            recs += [
+                PlantRecommendation(plant_name="Pamuk", confidence_score=85.0, probability=0.85),
+                PlantRecommendation(plant_name="Mısır", confidence_score=80.0, probability=0.80),
+                PlantRecommendation(plant_name="Domates", confidence_score=75.0, probability=0.75),
+                PlantRecommendation(plant_name="Biber", confidence_score=70.0, probability=0.70),
+                PlantRecommendation(plant_name="Patates", confidence_score=65.0, probability=0.65)
+            ]
+        elif wrb in [21, 22]:
+            recs += [
+                PlantRecommendation(plant_name="Zeytin", confidence_score=85.0, probability=0.85),
+                PlantRecommendation(plant_name="Üzüm", confidence_score=80.0, probability=0.80),
+                PlantRecommendation(plant_name="Badem", confidence_score=75.0, probability=0.75),
+                PlantRecommendation(plant_name="Kayısı", confidence_score=70.0, probability=0.70),
+                PlantRecommendation(plant_name="Şeftali", confidence_score=65.0, probability=0.65)
+            ]
+        else:
+            recs += [
+                PlantRecommendation(plant_name="Buğday", confidence_score=80.0, probability=0.80),
+                PlantRecommendation(plant_name="Arpa", confidence_score=75.0, probability=0.75),
+                PlantRecommendation(plant_name="Mısır", confidence_score=70.0, probability=0.70),
+                PlantRecommendation(plant_name="Patates", confidence_score=65.0, probability=0.65),
+                PlantRecommendation(plant_name="Fasulye", confidence_score=60.0, probability=0.60)
+            ]
+        if sep_max > 30:
+            recs.append(PlantRecommendation(plant_name="Pamuk", confidence_score=90.0, probability=0.90))
+            recs.append(PlantRecommendation(plant_name="Mısır", confidence_score=85.0, probability=0.85))
+        if dec_max < 5:
+            recs.append(PlantRecommendation(plant_name="Arpa", confidence_score=90.0, probability=0.90))
+            recs.append(PlantRecommendation(plant_name="Patates", confidence_score=85.0, probability=0.85))
+        if annual_rain < 400:
+            recs.append(PlantRecommendation(plant_name="Zeytin", confidence_score=90.0, probability=0.90))
+            recs.append(PlantRecommendation(plant_name="Badem", confidence_score=85.0, probability=0.85))
+        if annual_rain > 800:
+            recs.append(PlantRecommendation(plant_name="Çay", confidence_score=90.0, probability=0.90))
+            recs.append(PlantRecommendation(plant_name="Fındık", confidence_score=85.0, probability=0.85))
+        uniq: Dict[str, PlantRecommendation] = {}
+        for r in sorted(recs, key=lambda x: x.confidence_score, reverse=True):
+            if r.plant_name not in uniq:
+                uniq[r.plant_name] = r
+        return list(uniq.values())[:5]
 
-# Servis instance'ı oluştur
+    # ---------- Ana Akış ----------
+    def analyze(self, req: MLRequest) -> MLAnalysisResponse:
+        soil_raw = self._get_soil_data(req.method, req.coordinates)
+        used_coords = soil_raw.get('coordinates', {'longitude': 0.0, 'latitude': 0.0})
+        soil_feats = self._extract_soil_features(soil_raw)
+        climate_feats = self._get_climate_features()
+        vector = self._prepare_vector(soil_feats, climate_feats)
+        recs = self._predict(vector)
+        model_info = {
+            "model_type": type(self.model).__name__ if self.model else "Fallback Rules",
+            "scaler_type": type(self.scaler).__name__ if self.scaler else "None",
+            "feature_count": len(self.feature_columns),
+            "recommendation_count": len(recs),
+            "fallback_mode": self.fallback_mode,
+            "metadata": self._json_safe(self.metadata),
+        }
+        return MLAnalysisResponse(
+            success=True,
+            message="ML analysis completed successfully",
+            timestamp=datetime.now(),
+            coordinates={"longitude": float(used_coords.get('longitude', 0.0)), "latitude": float(used_coords.get('latitude', 0.0))},
+            soil_data=soil_feats,
+            climate_data=climate_feats,
+            recommendations=recs,
+            model_info=model_info,
+        )
+
+
+# ---------- Router Endpoint'leri ----------
 try:
-    ml_service = MLService()
-    logger.info("ML Service initialized successfully")
+    _ml_service = MLService()
+    logger.info("ML Service ready")
 except Exception as e:
-    logger.error(f"Failed to initialize ML Service: {str(e)}")
-    ml_service = None
+    logger.error(f"ML Service initialization failed: {e}")
+    _ml_service = None
 
-# API Endpoint'leri
+
 @router.get("/", response_model=Dict[str, str])
-async def root():
-    """ML API ana endpoint'i"""
+async def root() -> Dict[str, str]:
     return {
         "message": "Machine Learning API",
-        "version": "1.0.0",
-        "status": "running",
-        "docs": "/docs"
+        "version": "2.0.0",
+        "status": "running" if _ml_service else "unavailable",
+        "docs": "/docs",
     }
 
+
 @router.get("/health", response_model=Dict[str, str])
-async def health_check():
-    """Sağlık kontrolü endpoint'i"""
-    if ml_service is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ML Service not available"
-        )
-    
-    status_info = {
+async def health() -> Dict[str, str]:
+    if _ml_service is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ML Service not available")
+    return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "service": "Machine Learning API",
-        "model_status": "Active" if not ml_service.fallback_mode else "Corrupted - Using fallback rules",
-        "model_type": type(ml_service.model).__name__ if ml_service.model else "Fallback Rules",
-        "scaler_type": type(ml_service.scaler).__name__ if ml_service.scaler else "None",
-        "fallback_mode": str(ml_service.fallback_mode)
+        "model_status": "Active" if not _ml_service.fallback_mode else "Fallback",
+        "model_type": type(_ml_service.model).__name__ if _ml_service.model else "Fallback Rules",
+        "scaler_type": type(_ml_service.scaler).__name__ if _ml_service.scaler else "None",
+        "fallback_mode": str(_ml_service.fallback_mode),
     }
-    
-    return status_info
+
 
 @router.post("/analyze", response_model=MLAnalysisResponse)
-async def analyze_and_recommend_plants(request: MLRequest):
-    """
-    Bitki önerisi analizi
-    
-    Args:
-        request: ML analizi isteği
-        
-    Returns:
-        Bitki önerileri ve analiz sonuçları
-        
-    Raises:
-        HTTPException: Analiz hatası
-    """
-    if ml_service is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ML Service not available"
-        )
-    
+async def analyze(request: MLRequest) -> MLAnalysisResponse:
+    if _ml_service is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ML Service not available")
     try:
-        logger.info(f"ML analysis request received: {request.method}")
-        return ml_service.analyze_and_recommend(request)
-        
+        return _ml_service.analyze(request)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"ML analysis endpoint error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ML analysis failed: {str(e)}"
-        )
+        logger.error(f"ML analysis error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"ML analysis failed: {e}")
 
+
+# ------------------------------------------------------------
+# Opsiyonel Standalone Sunucu (yalnızca doğrudan çalıştırıldığında)
+# Bu, port çakışmasını önlemek için 8003'te yalnızca ML router'ını ayağa kaldırır.
+# `Backend/API/main.py` içinde include edildiğinde etkisi yoktur.
+# ------------------------------------------------------------
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(router, host="0.0.0.0", port=8003)
+    try:
+        import uvicorn
+        from fastapi import FastAPI
+
+        app = FastAPI(title="Machine Learning API (Standalone)", version="2.0.0")
+        app.include_router(router)
+
+        uvicorn.run(app, host="0.0.0.0", port=8003, log_level="info")
+    except Exception as e:
+        logger.error(f"Failed to start standalone ML server: {e}")
+
+
