@@ -402,7 +402,7 @@ class OrganicFarmingChatBot:
                     )
                 final_response = self.chat_session.send_message(function_response_parts)
 
-            return final_response.text
+            return final_response.candidates[0].content.parts[0].text
         else:
             # Function call yoksa direkt text cevabını döndür
             return response.text if hasattr(response, 'text') else text_response
