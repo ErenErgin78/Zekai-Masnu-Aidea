@@ -8,6 +8,7 @@ from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
 from SoilType import soil_api as soil_router
 from Weather import router as weather_router
+from MachineLearning import ml_api as ml_router
 import logging
 
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Aidea API",
     version="1.0.0",
-    description="Soil Analysis, Weather, and ML Prediction API"
+    description="Soil Analysis and Weather API"
 )
 
 
@@ -51,6 +52,7 @@ async def startup():
 # Router'ları ekle
 app.include_router(soil_router.router)
 app.include_router(weather_router.router)
+app.include_router(ml_router.router)
 
 # Ana endpoint'ler
 @app.get("/")
@@ -62,6 +64,8 @@ def root():
         "status": "running",
         "endpoints": {
             "soil_analysis": "/soiltype/",
+            "weather": "/weather/",
+            "ml_analysis": "/ml/",
             "health": "/health",
             "docs": "/docs"
         }

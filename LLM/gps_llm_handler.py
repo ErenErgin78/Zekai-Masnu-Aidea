@@ -149,7 +149,7 @@ async def get_soil_data(longitude: float, latitude: float):
     Çalışan Soil API'ye istek atarak toprak verisini çeker.
     """
     # Doğru endpoint
-    api_url = "http://localhost:8000/analyze"
+    api_url = "http://localhost:8000/soiltype/analyze"
     
     # Doğru JSON formatı - ONDALIKLI koordinatlar
     request_data = {
@@ -196,7 +196,7 @@ async def get_soil_data_auto():
     Otomatik konum tespiti için Soil API'ye istek atar.
     """
     # Doğru endpoint - otomatik analiz için
-    api_url = "http://localhost:8000/analyze/auto"
+    api_url = "http://localhost:8000/soiltype/analyze/auto"
     
     # Doğru JSON formatı - otomatik analiz için
     request_data = {

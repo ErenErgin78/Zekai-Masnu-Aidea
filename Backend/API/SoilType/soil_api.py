@@ -531,9 +531,9 @@ class SoilAnalysisService:
             
             if g.ok:
                 lat, lon = g.latlng
-                # Koordinatları tam sayıya yuvarla (güvenlik için)
-                lat_rounded = round(lat)
-                lon_rounded = round(lon)
+                # Koordinatları virgülden sonra 2 haneye yuvarla
+                lat_rounded = round(lat, 1)
+                lon_rounded = round(lon, 1)
                 logger.info(f"Location detected: Lat={lat_rounded}, Lon={lon_rounded}")
                 return lon_rounded, lat_rounded
             else:
@@ -559,9 +559,9 @@ class SoilAnalysisService:
             HTTPException: Analiz hatası
         """
         try:
-            # Koordinatları yuvarla (güvenlik için)
-            longitude = round(longitude)
-            latitude = round(latitude)
+            # Koordinatları virgülden sonra 2 haneye yuvarla
+            longitude = round(longitude, 1)
+            latitude = round(latitude, 1)
             
             # Toprak ID'sini al
             soil_id = self.get_soil_id_from_raster(longitude, latitude)
@@ -1213,6 +1213,8 @@ async def analyze_coordinates_from_csv_endpoint(csv_file_path: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"CSV soil analysis failed: {str(e)}"
         )
+
+
 
 if __name__ == "__main__":
     import uvicorn

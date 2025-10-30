@@ -1,0 +1,115 @@
+================================================================================
+MULTI-LABEL VERİ SETİ HAZIRLAMA RAPORU
+================================================================================
+Rapor Tarihi: 2025-10-26 21:46:18
+
+VERİ SETİ BİLGİLERİ
+----------------------------------------
+Toplam satır: 1564
+Toplam sütun: 75
+Özellik sayısı: 36
+Label sayısı: 39
+
+ÜRÜN BİLGİLERİ
+----------------------------------------
+Toplam ürün sayısı: 39
+Ürünler:
+   1. Arpa
+   2. Ayçiçeği
+   3. Badem
+   4. Biber
+   5. Buğday
+   6. Ceviz
+   7. Domates
+   8. Elma
+   9. Fasulye
+  10. Fındık
+  11. Fıstık
+  12. Gül
+  13. Haşhaş
+  14. Kayısı
+  15. Kiraz
+  16. Kivi
+  17. Mercimek
+  18. Meyve
+  19. Muz
+  20. Mısır
+  21. Narenciye
+  22. Nohut
+  23. Pamuk
+  24. Patates
+  25. Patlıcan
+  26. Pirinç
+  27. Sarımsak
+  28. Sebze
+  29. Turunçgiller
+  30. Tütün
+  31. Yer Fıstığı
+  32. Zeytin
+  33. Çay
+  34. Çilek
+  35. Üzüm
+  36. İncir
+  37. Şeftali
+  38. Şeker Pancarı
+  39. Şerbetçi Otu
+
+ŞEHİR-ÜRÜN DAĞILIMI
+----------------------------------------
+Adana: Pamuk, Mısır, Narenciye
+Adıyaman: Pamuk, Buğday, Tütün
+Afyonkarahisar: Haşhaş, Patates, Şeker Pancarı
+Ağrı: Buğday, Arpa, Patates
+Aksaray: Buğday, Arpa, Şeker Pancarı
+Amasya: Elma, Kiraz, Şeftali
+Ankara: Buğday, Arpa, Şeker Pancarı
+Antalya: Domates, Biber, Patlıcan
+Ardahan: Arpa, Buğday, Patates
+Artvin: Çay, Kivi, Fındık
+... ve 71 şehir daha
+
+LABEL DAĞILIMI
+----------------------------------------
+Buğday: 1023 şehir (65.4%)
+Arpa: 557 şehir (35.6%)
+Şeker Pancarı: 440 şehir (28.1%)
+Patates: 346 şehir (22.1%)
+Pamuk: 257 şehir (16.4%)
+Zeytin: 236 şehir (15.1%)
+Domates: 181 şehir (11.6%)
+Mısır: 168 şehir (10.7%)
+Üzüm: 163 şehir (10.4%)
+Elma: 117 şehir (7.5%)
+Narenciye: 111 şehir (7.1%)
+Fındık: 106 şehir (6.8%)
+Biber: 94 şehir (6.0%)
+Mercimek: 90 şehir (5.8%)
+Nohut: 84 şehir (5.4%)
+Ayçiçeği: 66 şehir (4.2%)
+Kiraz: 62 şehir (4.0%)
+Tütün: 59 şehir (3.8%)
+Pirinç: 57 şehir (3.6%)
+Kayısı: 56 şehir (3.6%)
+Fasulye: 48 şehir (3.1%)
+Patlıcan: 47 şehir (3.0%)
+Muz: 36 şehir (2.3%)
+Sarımsak: 32 şehir (2.0%)
+Şeftali: 32 şehir (2.0%)
+Haşhaş: 30 şehir (1.9%)
+Kivi: 27 şehir (1.7%)
+Gül: 26 şehir (1.7%)
+Çay: 23 şehir (1.5%)
+İncir: 20 şehir (1.3%)
+Ceviz: 17 şehir (1.1%)
+Fıstık: 16 şehir (1.0%)
+Badem: 14 şehir (0.9%)
+Çilek: 13 şehir (0.8%)
+Sebze: 12 şehir (0.8%)
+Şerbetçi Otu: 12 şehir (0.8%)
+Turunçgiller: 11 şehir (0.7%)
+Yer Fıstığı: 3 şehir (0.2%)
+Meyve: 0 şehir (0.0%)
+
+================================================================================
+RAPOR SONU
+================================================================================

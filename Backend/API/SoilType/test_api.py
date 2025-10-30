@@ -115,7 +115,7 @@ async def test_manual_analysis(longitude, latitude):
             print(f"📤 Gönderilen JSON: {json.dumps(request_data, indent=2)}")
             
             response = await client.post(
-                "http://localhost:8000/analyze",
+                "http://localhost:8000/soiltype/analyze",
                 json=request_data,
                 timeout=30.0
             )
@@ -167,7 +167,7 @@ async def test_auto_analysis():
             print(f"📤 Gönderilen JSON: {json.dumps(request_data, indent=2)}")
             
             response = await client.post(
-                "http://localhost:8000/analyze/auto",
+                "http://localhost:8000/soiltype/analyze/auto",
                 json=request_data,
                 timeout=30.0
             )
@@ -263,7 +263,7 @@ async def test_turkey_points():
             print(f"📤 İstek parametreleri: {params}")
             
             response = await client.get(
-                "http://localhost:8000/points/turkey",
+                "http://localhost:8000/soiltype/points/turkey",
                 params=params,
                 timeout=9000.0
             )
@@ -331,7 +331,7 @@ async def test_csv_analysis():
             print("⏳ Analiz başlıyor... (Bu işlem uzun sürebilir)")
             
             response = await client.post(
-                "http://localhost:8000/analyze/csv",
+                "http://localhost:8000/soiltype/analyze/csv",
                 params={"csv_file_path": csv_file_path},
                 timeout=1800.0  # 30 dakika timeout
             )
@@ -375,7 +375,7 @@ async def test_health_check():
     
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get("http://localhost:8000/health", timeout=10.0)
+            response = await client.get("http://localhost:8000/soiltype/health", timeout=10.0)
             
             if response.status_code == 200:
                 result = response.json()

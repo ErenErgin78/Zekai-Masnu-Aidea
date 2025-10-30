@@ -9,7 +9,12 @@
 *.env.*
 !.env.example
 .cursor/
-
+*.pdf
+.pdf
+.epub
+*.epub
+PDFs/
+*.ldb
 # Python
 __pycache__/
 *.py[cod]
@@ -102,4 +107,8 @@ dergipark_pdfs/
 .sqlite3
 vector_store/
 *.bil
+*.mdb
 mgm_iklim_verileri.csv
+
+# IGNORE 
+Örnek_Promptlar.txt
