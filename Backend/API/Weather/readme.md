@@ -3,6 +3,37 @@
 Bu FastAPI router (`router.py`), Open-Meteo API'lerini kullanarak hava durumu verilerini almak için endpoint'ler sağlar. Günlük tahmin, saatlik tahmin ve geçmiş tarihli verileri destekler. Konum belirleme, kullanıcının IP adresinden otomatik olarak veya manuel koordinat girişi (enlem/boylam) ile yapılabilir.
 
 
+## Önemli Özellikler
+
+- **Asenkron İstekler:** Dış API çağrıları, FastAPI'nin asenkron yapısına uygun olarak `httpx` kütüphanesi ile non-blocking (bloke etmeyen) bir şekilde yapılır.
+- **Redis Önbelleğe Alma (Caching):** Dış API'ye giden istekleri en aza indirmek ve performansı dramatik olarak artırmak için `fastapi-cache2` kütüphanesi kullanılır.
+
+## GEREKSİNİMLER
+
+Bu API modülünün düzgün çalışması için **çalışan bir Redis sunucusuna** ihtiyaç vardır(Redis olmasa da çalışır. Sadece Cache işlemi yapılmaz).
+
+Ana `main.py` dosyası, Redis'e `redis://localhost:6379` adresi üzerinden bağlanacak şekilde yapılandırılmıştır.
+
+### Hata Ayıklama: `ConnectionError`
+Eğer uygulama loglarında `redis.exceptions.ConnectionError: ... [Errno 10061] Connect call failed` gibi bir hata görüyorsanız, bu durum **Redis sunucunuzun çalışmadığı** anlamına gelir.
+
+**Çözüm:** Redis sunucunuzu başlatın. Eğer Docker kullanıyorsanız, aşağıdaki komutla hızlıca bir Redis container'ı başlatabilirsiniz:
+```bash
+docker run -d -p 6379:6379 redis
+```
+
+## Önbelleğe Alma (Caching) Mantığı
+
+Dış API'ye yapılan pahalı istekler, Redis üzerinde şu sürelerle önbelleğe alınır:
+
+- **Saatlik Tahmin (`get_hourly_Data`):** 1 Saat (3600 saniye)
+- **Günlük Tahmin (`get_daily_Data`):** 1 Saat (3600 saniye)
+- **Geçmiş Veri (`get_data_by_date`):** 24 Saat (86400 saniye)
+
+Cache'leme sayesinde, aynı koordinatlar için 1 saat içinde gelen binlerce istek, Open-Meteo API'sine hiç gitmeden, milisaniyeler içinde doğrudan Redis'ten yanıtlanır.
+
+
+
 ## Veri Modelleri (Pydantic)
 
 API, istek gövdelerini doğrulamak için aşağıdaki Pydantic modellerini kullanır:
