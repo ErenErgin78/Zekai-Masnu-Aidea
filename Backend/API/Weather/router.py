@@ -1,7 +1,10 @@
 # Weather router - hava durumu API endpoint'leri
 
 import requests
+import asyncio
+import httpx
 from fastapi import APIRouter, HTTPException, Query
+from fastapi_cache.decorator import cache
 from pydantic import BaseModel, Field, field_validator
 import re
 from typing import Optional
@@ -98,7 +101,7 @@ def _validate_dates(start_date: date, end_date: date):
         raise HTTPException(status_code=400, detail="end_date too far in the future")
     
 
-def get_automatic_coordinates() -> tuple[Optional[float], Optional[float]]:
+async def get_automatic_coordinates() -> tuple[Optional[float], Optional[float]]:
     """
     IP adresinden otomatik konum tespiti
     
@@ -110,7 +113,9 @@ def get_automatic_coordinates() -> tuple[Optional[float], Optional[float]]:
     """
     try:
         logger.info("Attempting automatic location detection...")
-        g = geocoder.ip('me')
+        # <<< YENİ: 'geocoder' bloke edici bir kütüphanedir.
+        # FastAPI'nin ana thread'ini kilitlememesi için bir thread'de çalıştırıyoruz.
+        g = await asyncio.to_thread(geocoder.ip, 'me')
         
         if g.ok:
             lat, lon = g.latlng
@@ -123,8 +128,10 @@ def get_automatic_coordinates() -> tuple[Optional[float], Optional[float]]:
     except Exception as e:
         logger.error(f"Error in automatic location detection: {str(e)}")
         raise Exception(f"Location detection error: {str(e)}")
-        
-def get_hourly_Data(latitude, longitude,day=1):
+
+# Saatlik hava durumu verilerini al
+@cache(namespace="weather-hourly", expire=3600)
+async def get_hourly_Data(latitude, longitude,day=1):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": latitude,
@@ -135,7 +142,11 @@ def get_hourly_Data(latitude, longitude,day=1):
     }
 
     try: 
-        response = requests.get(url, params=params)
+        logger.info(f"DIŞ API'ye saatlik istek atılıyor: Lat={latitude}, Lon={longitude}")
+        async with httpx.AsyncClient() as client:
+
+            response = await client.get(url, params=params)
+            response.raise_for_status()
         if response.status_code==200:
             data = response.json()
 
@@ -202,12 +213,17 @@ def get_hourly_Data(latitude, longitude,day=1):
             
 
             
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
+        logger.error(f"Hava durumu API isteği hatası (hourly): {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Veri işleme hatası (hourly): {e}")
         return None
     
 
 # Günlük hava durumu verilerini al
-def get_daily_Data(latitude, longitude,days=1):
+@cache(namespace="weather-daily", expire=3600)
+async def get_daily_Data(latitude, longitude,days=1):
 
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
@@ -218,8 +234,11 @@ def get_daily_Data(latitude, longitude,days=1):
         "forecast_days": days
     }
 
-    try: 
-        response = requests.get(url, params=params)
+    try:
+        logger.info(f"DIŞ API'ye günlük istek atılıyor: Lat={latitude}, Lon={longitude}") 
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
         if response.status_code==200:
             data = response.json()
 
@@ -270,10 +289,15 @@ def get_daily_Data(latitude, longitude,days=1):
                 data_by_day.append({"coordinates": {"longitude": longitude, "latitude": latitude}})
             return data_by_day
             
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
+        logger.error(f"Hava durumu API isteği hatası (daily): {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Veri işleme hatası (daily): {e}")
         return None
 
-def get_data_by_date(latitude, longitude, start_date, end_date):
+@cache(namespace="weather-hourly", expire=3600)
+async def get_data_by_date(latitude, longitude, start_date, end_date):
     """ Belirli bir tarih için veri alma fonksiyonu """
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
@@ -286,7 +310,11 @@ def get_data_by_date(latitude, longitude, start_date, end_date):
     }
 
     try: 
-        response = requests.get(url, params=params)
+        logger.info(f"DIŞ API'ye tarih bazlı istek atılıyor: Lat={latitude}, Lon={longitude}, Start={start_date}, End={end_date}")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+        
         if response.status_code==200:
             data = response.json()
 
@@ -337,7 +365,11 @@ def get_data_by_date(latitude, longitude, start_date, end_date):
                 data_by_day.append({"coordinates": {"longitude": longitude, "latitude": latitude}})
             return data_by_day
             
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
+        logger.error(f"Hava durumu API isteği hatası (archive): {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Veri işleme hatası (archive): {e}")
         return None
 
 
@@ -345,11 +377,11 @@ def get_data_by_date(latitude, longitude, start_date, end_date):
 async def daily_weather_auto(request: AutoRequest, days: int = Query(default=1, ge=1, le=16, description="Gün sayısı (1-16 arası)")):
     """Otomatik konum tespiti ile günlük hava durumu (days optional query param)"""
     try:
-        lon, lat = get_automatic_coordinates()
+        lon, lat = await get_automatic_coordinates()
         if lon is None or lat is None:
             return {"error": "Konum tespit edilemedi"}
             
-        data = get_daily_Data(lat, lon, days)
+        data = await get_daily_Data(lat, lon, days) 
         if data:           
             return data
         return {"error": "Hava durumu verisi alınamadı"}
@@ -362,7 +394,7 @@ async def daily_weather_auto(request: AutoRequest, days: int = Query(default=1, 
 async def daily_weather_manual(request: ManualRequest, days: int = Query(default=1, ge=1, le=16, description="Gün sayısı (1-16 arası)")):
     """Manuel koordinatlar ile günlük hava durumu (days optional query param)"""
     try:
-        data = get_daily_Data(request.latitude, request.longitude, days)
+        data = await get_daily_Data(request.latitude, request.longitude, days)
         if data:
             return data
         return {"error": "Hava durumu verisi alınamadı"}
@@ -377,7 +409,7 @@ async def daily_weather_by_date(request: ManualRequest, start_date: date, end_da
 
     try:
         _validate_dates(start_date,end_date)
-        data = get_data_by_date(request.latitude, request.longitude, start_date, end_date)
+        data = await get_data_by_date(request.latitude, request.longitude, start_date, end_date)
         if data:
             return data
         return {"error": "Hava durumu verisi alınamadı"}
@@ -391,11 +423,11 @@ async def daily_weather_by_date_auto(request: AutoRequest, start_date: date, end
     """
     try:
         _validate_dates(start_date,end_date)
-        lon, lat = get_automatic_coordinates()
+        lon, lat = await get_automatic_coordinates()
         if lon is None or lat is None:
             return {"error": "Konum tespit edilemedi"}
             
-        data = get_data_by_date(lat, lon, start_date, end_date)
+        data = await get_data_by_date(lat, lon, start_date, end_date)
         if data:           
             return data
         return {"error": "Hava durumu verisi alınamadı"}
@@ -406,11 +438,11 @@ async def daily_weather_by_date_auto(request: AutoRequest, start_date: date, end
 async def hourly_weather_auto(request: AutoRequest, days: int = Query(default=1, ge=1, le=16, description="Gün sayısı (1-16 arası)")):
     """Otomatik konum tespiti ile saatlik hava durumu (days optional query param)"""
     try:
-        lon, lat = get_automatic_coordinates()
+        lon, lat = await get_automatic_coordinates()
         if lon is None or lat is None:
             return {"error": "Konum tespit edilemedi"}
             
-        data = get_hourly_Data(lat, lon, day=days)
+        data = await get_hourly_Data(lat, lon, day=days)
         if data:
             return data
         return {"error": "Hava durumu verisi alınamadı"}
@@ -422,7 +454,7 @@ async def hourly_weather_manual(request: ManualRequest, days: int = Query(defaul
     """Manuel koordinatlar ile saatlik hava durumu (days optional query param)"""
     
     try:
-        data = get_hourly_Data(request.latitude, request.longitude, day=days)
+        data = await get_hourly_Data(request.latitude, request.longitude, day=days)
         if data:
             return data
         return {"error": "Hava durumu verisi alınamadı"}
