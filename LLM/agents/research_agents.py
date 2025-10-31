@@ -54,19 +54,6 @@ except ImportError as e:
         def __call__(self, city): 
             return "Hava durumu mevcut değil"
 
-# ✅ YENİ: Crop Recommendation Tool entegrasyonu
-try:
-    from crop_recommendation_tool import CropRecommendationTool
-    print("✅ Crop Recommendation Tool yüklendi")
-except ImportError as e:
-    print(f"❌ Crop Recommendation Tool yüklenemedi: {e}")
-    # Fallback class
-    class CropRecommendationTool:
-        def __init__(self): 
-            self.name = "Crop Recommendation Tool"
-        def recommend_crop(self, nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall):
-            return "Mahsul öneri sistemi mevcut değil"
-
 class ResearchAgent:
     def __init__(self, tools: list = None, verbose: bool = True):
         self.name = "Soil Research Agent"

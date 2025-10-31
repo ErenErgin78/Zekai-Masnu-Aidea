@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # FastAPI uygulaması oluştur
 app = FastAPI(
-    title="Aidea API",
+    title="UMAY API",
     version="1.0.0",
     description="Soil Analysis and Weather API"
 )
@@ -43,7 +43,7 @@ app.include_router(ml_router.router)
 def root():
     """Ana sayfa - API bilgileri"""
     return {
-        "message": "Aidea API",
+        "message": "UMAY API",
         "version": "1.0.0",
         "status": "running",
         "endpoints": {
@@ -58,7 +58,7 @@ def root():
 @app.get("/health")
 def health():
     """Sağlık kontrolü"""
-    return {"status": "ok", "service": "Aidea API"}
+    return {"status": "ok", "service": "UMAY API"}
 
 
 @app.exception_handler(Exception)

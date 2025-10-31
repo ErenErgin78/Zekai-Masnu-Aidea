@@ -1,6 +1,6 @@
 {
-    "name": "AIDEA - Tarım Asistanı",
-    "short_name": "AIDEA",
+    "name": "UMAY - Tarım Asistanı",
+    "short_name": "UMAY",
     "description": "Yapay zeka destekli tarım asistanı",
     "start_url": "/",
     "display": "standalone",

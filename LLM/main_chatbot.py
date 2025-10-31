@@ -24,7 +24,7 @@ service_manager_instance = None
 
 # FastAPI app for frontend communication
 app = FastAPI(
-    title="Aidea Chatbot API",
+    title="UMAY Chatbot API",
     version="1.0.0",
     description="Chatbot API for frontend communication"
 )
@@ -94,7 +94,7 @@ try:
     if main_dir not in sys.path:
         sys.path.insert(0, main_dir)
     
-    from main import AideaServiceManager
+    from main import UmayServiceManager
     print("✅ Service Manager başarıyla import edildi")
 except ImportError as e:
     print(f"❌ Service Manager import hatası: {e}")
@@ -262,12 +262,12 @@ async def manifest():
 
 @app.get("/api/health")
 async def api_health():
-    return {"status": "ok", "service": "Aidea Chatbot API"}
+    return {"status": "ok", "service": "UMAY Chatbot API"}
 
 async def main():
     """Ana fonksiyon - Sadece Web API modu"""
     
-    print("""🌱 AIDEA TARIM ASİSTANI 🌱""")
+    print("""🌱 UMAY TARIM ASİSTANI 🌱""")
     
     await run_web_api()
 
@@ -303,7 +303,7 @@ async def initialize_chatbot():
     """Chatbot'u başlat (input beklemeden)"""
     global chatbot_instance, service_manager_instance
     
-    print("🌱 Aidea Tarım Asistanı")
+    print("🌱 UMAY Tarım Asistanı")
     print("=" * 60)
 
     # ✅ 1. SOIL+WEATHER API'Yİ BAŞLAT
@@ -323,7 +323,7 @@ async def initialize_chatbot():
     
     # Service Manager'ı başlat
     print("\n🔧 Servisler başlatılıyor...")
-    service_manager = AideaServiceManager()
+    service_manager = UmayServiceManager()
     await service_manager.initialize_services()
     service_manager_instance = service_manager
     

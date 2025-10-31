@@ -55,7 +55,7 @@ class ToolConfig:
     service_type: ServiceType = ServiceType.CUSTOM_TOOL
 
 # --- Merkezi Servis Yöneticisi ---
-class AideaServiceManager:
+class UmayServiceManager:
     def __init__(self):
         self.services = {}
         self.tools = {}
@@ -68,7 +68,7 @@ class AideaServiceManager:
         if self._initialized:
             return
             
-        print("🚀 Aidea Servis Yöneticisi Başlatılıyor...")
+        print("🚀 UMAY Servis Yöneticisi Başlatılıyor...")
         
         try:
             # 1. Soil API Servisi
@@ -472,12 +472,12 @@ class AideaServiceManager:
         }
 
 # --- Global Service Manager ---
-service_manager = AideaServiceManager()
+service_manager = UmayServiceManager()
 
 # --- Ana Uygulama ---
 async def main():
     """Ana uygulama"""
-    print("🌍 Aidea Merkezi Sistem")
+    print("🌍 UMAY Merkezi Sistem")
     print("=" * 50)
     
     await service_manager.initialize_services()

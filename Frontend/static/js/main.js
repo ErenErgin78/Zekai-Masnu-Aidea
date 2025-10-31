@@ -1,6 +1,4 @@
-// ===== SADE VE TEMİZ CHAT UYGULAMASI =====
-
-class AideaChat {
+class UmayChat {
     constructor() {
         this.theme = localStorage.getItem('theme') || 'light';
         this.messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
@@ -34,7 +32,7 @@ class AideaChat {
         this.weatherContent = document.getElementById('weatherContent');
         this.soilContent = document.getElementById('soilContent');
         
-        // Chat geçmişi için container oluştur
+        // Sohbet geçmişi için alan oluştur
         this.createChatHistoryUI();
     }
     
@@ -44,10 +42,10 @@ class AideaChat {
     }
     
     setupEventListeners() {
-        // Send button click
+        // Gönder düğmesi tıklama
         this.sendButton.addEventListener('click', () => this.sendMessage());
         
-        // Enter key press
+        // Enter tuşu gönderir
         this.messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey && !this.isTyping) {
                 e.preventDefault();
@@ -55,18 +53,18 @@ class AideaChat {
             }
         });
         
-        // Input change
+        // Girdi değişince düğmeyi güncelle
         this.messageInput.addEventListener('input', () => {
             this.updateSendButton();
         });
         
-        // Theme toggle
+        // Tema değiştirici
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
         
-        // Sidebar toggle
+        // Kenar çubuğu aç/kapat
         this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
         
-        // Yeni chat butonu event listener
+        // Yeni sohbet düğmesi olayı
         const newChatBtn = document.getElementById('newChatBtn');
         if (newChatBtn) {
             newChatBtn.addEventListener('click', () => {
@@ -75,19 +73,19 @@ class AideaChat {
             });
         }
         
-        // Weather button
+        // Hava durumu düğmesi
         if (this.weatherBtn) {
             this.weatherBtn.addEventListener('click', () => this.loadWeatherData());
         }
         
-        // Soil button
+        // Toprak analizi düğmesi
         if (this.soilBtn) {
             this.soilBtn.addEventListener('click', () => this.loadSoilData());
         }
     }
     
     setupTyping() {
-        // Auto-resize textarea
+        // Metin kutusunu otomatik boyutlandır
         this.messageInput.addEventListener('input', () => {
             this.messageInput.style.height = 'auto';
             this.messageInput.style.height = this.messageInput.scrollHeight + 'px';
@@ -103,15 +101,15 @@ class AideaChat {
         const message = this.messageInput.value.trim();
         if (!message || this.isTyping) return;
         
-        // Add user message
+        // Kullanıcı mesajını ekle
         this.addMessage(message, 'user');
         this.messageInput.value = '';
         this.updateSendButton();
         
-        // Show typing indicator
+        // Yazıyor göstergesini göster
         this.showTyping();
         
-        // Get bot response from main_chatbot.py
+        // Bot cevabını API'den al
         try {
             const botResponse = await this.getBotResponse(message);
             this.hideTyping();
@@ -151,7 +149,7 @@ class AideaChat {
     }
     
     formatMessage(content) {
-        // Basic formatting
+        // Basit biçimleme
         return content
             .replace(/\n/g, '<br>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -161,11 +159,11 @@ class AideaChat {
     showTyping() {
         this.isTyping = true;
         
-        // Input'u devre dışı bırak
+        // Girişi geçici devre dışı bırak
         this.messageInput.disabled = true;
-        this.messageInput.placeholder = "AIDEA düşünüyor...";
+        this.messageInput.placeholder = "UMAY düşünüyor...";
         
-        // Send button'u "Durdur" olarak değiştir
+        // Gönder düğmesini "Durdur" yap
         this.sendButton.innerHTML = '<span class="send-icon">⏹️</span>';
         this.sendButton.title = "Durdur";
         
@@ -200,7 +198,7 @@ class AideaChat {
         this.sendButton.innerHTML = '<span class="send-icon">📤</span>';
         this.sendButton.title = "Gönder";
         
-        // Typing indicator'ı kaldır
+        // Yazıyor göstergesini kaldır
         const typingMessage = document.getElementById('typingIndicator');
         if (typingMessage) {
             typingMessage.remove();
@@ -209,7 +207,7 @@ class AideaChat {
     
     async getBotResponse(userMessage) {
         try {
-            // main_chatbot.py'ye prompt gönder
+            // API'ye istek gönder
             const response = await fetch('http://localhost:8001/chat/', {
                 method: 'POST',
                 headers: {
@@ -227,10 +225,10 @@ class AideaChat {
             
             const data = await response.json();
             
-            // JSON response'dan response alanını çıkar
+            // JSON içinden response alanını al
             let botResponse = data.response || "Cevap alınamadı.";
             
-            // JSON string ise parse et
+            // JSON metinse parse et
             if (typeof botResponse === 'string' && botResponse.startsWith('{')) {
                 try {
                     const parsedResponse = JSON.parse(botResponse);
@@ -240,7 +238,7 @@ class AideaChat {
                 }
             }
             
-            // \n karakterlerini <br> ile değiştir
+            // Satır sonlarını <br> ile değiştir
             botResponse = botResponse.replace(/\\n/g, '\n').replace(/\n/g, '<br>');
             
             return botResponse;
@@ -282,7 +280,7 @@ class AideaChat {
         welcomeMessage.className = 'welcome-message';
         welcomeMessage.innerHTML = `
             <div class="welcome-icon">🤖</div>
-            <h3>Merhaba! Ben AIDEA</h3>
+            <h3>Merhaba! Ben UMAY</h3>
             <p>Tarım konusunda size yardımcı olabilirim. Sorularınızı sorun!</p>
         `;
         this.chatMessages.appendChild(welcomeMessage);
@@ -522,7 +520,7 @@ class AideaChat {
             // Konum bilgisini al
             const location = await this.getCurrentLocation();
             
-            // Weather API'ye istek gönder
+            // Hava API'sine istek gönder
             const response = await fetch('http://localhost:8001/weather/', {
                 method: 'POST',
                 headers: {
@@ -540,7 +538,7 @@ class AideaChat {
             
             const weatherData = await response.json();
             
-            // Weather panelini güncelle - detaylı verilerle
+            // Hava panelini verilerle güncelle
             this.weatherContent.innerHTML = `
                 <div class="weather-data">
                     <div class="weather-main">
@@ -616,7 +614,7 @@ class AideaChat {
             // Konum bilgisini al
             const location = await this.getCurrentLocation();
             
-            // Soil API'ye istek gönder
+            // Toprak API'sine istek gönder
             const response = await fetch('http://localhost:8001/soil/', {
                 method: 'POST',
                 headers: {
@@ -634,7 +632,7 @@ class AideaChat {
             
             const soilData = await response.json();
             
-            // Soil panelini güncelle - tüm özellikleri göster
+            // Toprak panelini verilerle güncelle
             let soilDetailsHTML = '';
             
             // Tüm özellikleri döngü ile ekle
@@ -706,7 +704,7 @@ class AideaChat {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new AideaChat();
+    new UmayChat();
 });
 
 // Add typing indicator styles

@@ -1,10 +1,10 @@
-# 🌱 AIDEA - Akıllı Tarım Asistanı
+# 🌱 UMAY - Akıllı Tarım Asistanı
 
-AIDEA, yapay zeka destekli tarım asistanıdır. Organik tarım, toprak analizi ve hava durumu konularında çiftçilere akıllı öneriler sunar.
+UMAY, yapay zeka destekli tarım asistanıdır. Organik tarım, toprak analizi ve hava durumu konularında çiftçilere akıllı öneriler sunar.
 
 ## 🎯 Proje Amacı
 
-AIDEA, modern tarım teknikleri ile geleneksel bilgiyi birleştirerek çiftçilere:
+UMAY, modern tarım teknikleri ile geleneksel bilgiyi birleştirerek çiftçilere:
 - **Toprak analizi** ve besin önerileri
 - **Hava durumu** takibi ve iklim analizi  
 - **Organik tarım** bilgi bankası
@@ -138,7 +138,7 @@ http://localhost:8001
 ### Chat Sistemi
 1. **Ana sayfayı** açın
 2. **Mesaj yazın** (örn: "Ankara'da hava nasıl?")
-3. **AIDEA yanıtlar** ve öneriler sunar
+3. **UMAY yanıtlar** ve öneriler sunar
 4. **Sohbet geçmişi** otomatik kaydedilir
 
 ### Örnek Sorgular
@@ -189,4 +189,4 @@ Proje yalnızca yazılım ve yapay zeka temelli bir sistemdir; gerçek sensör, 
 
 ---
 
-**AIDEA** ile tarımınızı akıllı hale getirin! 🌱🤖
+**UMAY** ile tarımınızı akıllı hale getirin! 🌱🤖

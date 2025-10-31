@@ -17,7 +17,7 @@ class OrganicFarmingChatBot:
     def __init__(self, service_manager, model_name: str = "models/gemini-2.5-flash"):
         """
         Args:
-            service_manager: AideaServiceManager instance
+            service_manager: UmayServiceManager instance
             model_name: Gemini model adı
         """
         self.service_manager = service_manager
@@ -184,7 +184,7 @@ class OrganicFarmingChatBot:
     
     def _get_system_prompt(self) -> str:
         """Chatbot için system prompt - GÜNCELLENMİŞ"""
-        return """Sen Türk çiftçilere yardımcı olan organik tarım uzmanı bir asistansın. Adın "Aidea Tarım Asistanı".
+        return """Sen Türk çiftçilere yardımcı olan organik tarım uzmanı bir asistansın. Adın "UMAY Tarım Asistanı".
 
 🎯 GÖREVIN:
 - Toprak analizi yaparak çiftçilere tarımsal öneriler sunmak
