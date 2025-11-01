@@ -1,4 +1,4 @@
-# rag_processor_improved.py - AKILLI PDF YÖNETİMİ
+# rag_processor_improved.py - AKILLI PDF YÖNETİMİ (TOKEN BAZLI)
 import os
 import sys
 import warnings
@@ -7,8 +7,16 @@ from typing import List, Set, Dict, Optional
 
 # LangChain imports
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
+
+# Tokenizer için
+try:
+    from transformers import AutoTokenizer
+    TOKENIZER_AVAILABLE = True
+except ImportError:
+    TOKENIZER_AVAILABLE = False
+    print("⚠️ Transformers kütüphanesi kullanılamıyor")
 
 # PDF Fallback yükleyiciler
 try:
@@ -53,33 +61,75 @@ except ImportError:
 warnings.filterwarnings('ignore')
 
 class RAGProcessor:
-    def __init__(self, pdfs_path="PDFs", vector_store_path="vector_store"):
+    def __init__(self, pdfs_path="PDFs", vector_store_path="vector_store", model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2"):
         self.pdfs_path = pdfs_path
         self.vector_store_path = vector_store_path
+        self.model_name = model_name
         
         if not CHROMA_AVAILABLE:
             raise ImportError("ChromaDB kütüphanesi yüklenemedi!")
             
-        print("🔧 Embeddings modeli yükleniyor...")
+        print("🔧 MULTILINGUAL Embeddings modeli yükleniyor...")  # 🎯 MODEL İSMİ
         self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+            model_name=model_name,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
         )
-        print("✅ Embeddings hazır")
+        print("✅ MULTILINGUAL Embeddings hazır!")  # 🎯 MODEL İSMİ
+        
+        # Tokenizer'ı yükle (token bazlı bölme için)
+        self.tokenizer = None
+        if TOKENIZER_AVAILABLE:
+            try:
+                print("🔧 MULTILINGUAL Tokenizer yükleniyor...")  # 🎯 MODEL İSMİ
+                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+                
+                # 🎯 TOKEN LİMİT BİLGİSİ EKLE
+                model_max_length = self.tokenizer.model_max_length
+                print(f"🎉 MULTILINGUAL Token Limit: {model_max_length}")
+                
+                print("✅ Tokenizer hazır")
+            except Exception as e:
+                print(f"⚠️ Tokenizer yüklenemedi: {e}")
+                self.tokenizer = None
         
         self.vector_store = None
         
         # Başlangıçta vektör veritabanını yükle
         self._try_load_vector_store()
+    
+    def _create_token_text_splitter(self):
+        """MULTILINGUAL için token bazlı text splitter"""
+        if self.tokenizer and TOKENIZER_AVAILABLE:
+            try:
+                # Modelin token limitine göre güvenli chunk size
+                return TokenTextSplitter(
+                    chunk_size=1500,
+                    chunk_overlap=150
+                )
+            except Exception as e:
+                print(f"⚠️ Token splitter oluşturulamadı: {e}")
         
+        # Fallback: karakter bazlı ama daha küçük chunk'lar
+        print("⚠️ Tokenizer yok, karakter bazlı bölme kullanılıyor")
+        return RecursiveCharacterTextSplitter(
+            chunk_size=3000,  # Daha küçük - token sınırına uyması için
+            chunk_overlap=300
+        )
+    
+    def _count_tokens(self, text: str) -> int:
+        """Metnin token sayısını hesapla"""
+        if self.tokenizer and text:
+            return len(self.tokenizer.encode(text))
+        return len(text) // 4  # Tahmini: 1 token ≈ 4 karakter
+    
     def _try_load_vector_store(self):
         """Vektör veritabanını yüklemeyi dene"""
         try:
-            # Vektör store klasörünü kontrol et
             if not os.path.exists(self.vector_store_path):
                 print(f"⚠️ Vektör klasörü bulunamadı: {self.vector_store_path}")
                 return False
             
-            # chroma.sqlite3 dosyasını kontrol et
             sqlite_file = os.path.join(self.vector_store_path, "chroma.sqlite3")
             if not os.path.exists(sqlite_file):
                 print(f"⚠️ chroma.sqlite3 bulunamadı: {sqlite_file}")
@@ -87,13 +137,11 @@ class RAGProcessor:
             
             print(f"📂 Vektör veritabanı yükleniyor: {self.vector_store_path}")
             
-            # Chroma'yı yükle
             self.vector_store = Chroma(
                 persist_directory=self.vector_store_path,
                 embedding_function=self.embeddings
             )
             
-            # Test sorgusu yaparak kontrol et
             test_results = self.vector_store.similarity_search("test", k=1)
             
             if test_results:
@@ -111,7 +159,6 @@ class RAGProcessor:
     def _get_files_in_vector_store(self) -> Set[str]:
         """
         Vektör store'daki tüm dosyaların tam yollarını çıkar
-        Returns: Set of absolute file paths
         """
         if self.vector_store is None:
             print("⚠️ Vektör store yüklü değil")
@@ -120,17 +167,13 @@ class RAGProcessor:
         try:
             print("🔍 Vektör store'daki dosyalar sorgulanıyor...")
             
-            # Chroma'dan tüm metadata'ları al
-            # Bu, vektör store'daki tüm chunk'ları döndürür
             collection = self.vector_store._collection
             all_data = collection.get(include=['metadatas'])
             
-            # Metadata'lardan unique file path'leri çıkar
             files_in_store = set()
             if all_data and 'metadatas' in all_data:
                 for metadata in all_data['metadatas']:
                     if metadata and 'source' in metadata:
-                        # Absolute path'e çevir
                         source_path = Path(metadata['source']).resolve()
                         files_in_store.add(str(source_path))
             
@@ -156,14 +199,12 @@ class RAGProcessor:
             
             collection = self.vector_store._collection
             
-            # Bu dosyaya ait tüm ID'leri bul
             all_data = collection.get(include=['metadatas'])
             ids_to_delete = []
             
             if all_data and 'ids' in all_data and 'metadatas' in all_data:
                 for idx, metadata in enumerate(all_data['metadatas']):
                     if metadata and 'source' in metadata:
-                        # Path'leri normalize ederek karşılaştır
                         meta_source = str(Path(metadata['source']).resolve())
                         target_source = str(Path(file_path).resolve())
                         
@@ -192,19 +233,16 @@ class RAGProcessor:
             print(f"❌ PDFs klasörü bulunamadı: {self.pdfs_path}")
             return []
         
-        # Desteklenen dosya uzantıları
         supported_extensions = {
             '.pdf', '.doc', '.docx', '.txt', 
             '.rtf', '.odt', '.pptx', '.ppt'
         }
         
-        # Tüm alt klasörleri tarayarak dosyaları bul
         document_files = []
         for ext in supported_extensions:
             files = list(pdfs_path.rglob(f"*{ext}"))
             document_files.extend(files)
         
-        # Benzersiz dosya listesi - absolute path'e çevir
         document_files = [f.resolve() for f in set(document_files)]
         document_files.sort()
         
@@ -212,7 +250,7 @@ class RAGProcessor:
         return document_files
     
     def _load_pdf_with_pymupdf(self, file_path: Path) -> List[Document]:
-        """PyMuPDF ile PDF yükleme - EN GÜVENİLİR YÖNTEM"""
+        """PyMuPDF ile PDF yükleme"""
         if not PYMUPDF_AVAILABLE:
             return []
             
@@ -226,7 +264,6 @@ class RAGProcessor:
                 page = doc[page_num]
                 text = page.get_text()
                 
-                # Sadece içeriği olan sayfaları ekle
                 if text.strip():
                     document = Document(
                         page_content=text,
@@ -236,7 +273,8 @@ class RAGProcessor:
                             "file_type": ".pdf",
                             "page": page_num + 1,
                             "total_pages": len(doc),
-                            "loader_type": "pymupdf"
+                            "loader_type": "pymupdf",
+                            "token_count": self._count_tokens(text)  # Token sayısını ekle
                         }
                     )
                     documents.append(document)
@@ -244,9 +282,10 @@ class RAGProcessor:
             doc.close()
             
             if documents:
-                print(f"   ✅ {len(documents)} sayfa yüklendi (PyMuPDF)")
+                total_tokens = sum(doc.metadata.get('token_count', 0) for doc in documents)
+                print(f"   ✅ {len(documents)} sayfa yüklendi (PyMuPDF) - Toplam ~{total_tokens} token")
             else:
-                print(f"   ⚠️ PDF açıldı ama metin çıkarılamadı (taranmış görüntü olabilir)")
+                print(f"   ⚠️ PDF açıldı ama metin çıkarılamadı")
             
             return documents
             
@@ -277,25 +316,24 @@ class RAGProcessor:
             
             documents = loader.load()
             
-            # Boş içerik kontrolü
             non_empty_docs = []
             for doc in documents:
-                # Metadata'yi güncelle
                 doc.metadata.update({
                     "source": str(file_path),
                     "file_name": file_path.name,
                     "file_type": file_ext,
-                    "loader_type": "langchain"
+                    "loader_type": "langchain",
+                    "token_count": self._count_tokens(doc.page_content)  # Token sayısını ekle
                 })
                 
-                # Sadece içeriği olan dokümanları ekle
                 if doc.page_content and doc.page_content.strip():
                     non_empty_docs.append(doc)
             
             if non_empty_docs:
-                print(f"   ✅ {len(non_empty_docs)} sayfa yüklendi (LangChain)")
+                total_tokens = sum(doc.metadata.get('token_count', 0) for doc in non_empty_docs)
+                print(f"   ✅ {len(non_empty_docs)} sayfa yüklendi (LangChain) - Toplam ~{total_tokens} token")
             else:
-                print(f"   ⚠️ Dosya yüklendi ama içerik boş (OCR gerekebilir)")
+                print(f"   ⚠️ Dosya yüklendi ama içerik boş")
             
             return non_empty_docs
             
@@ -304,7 +342,7 @@ class RAGProcessor:
             return []
     
     def _load_document_with_unstructured(self, file_path: Path) -> List[Document]:
-        """unstructured.io ile gelişmiş belge yükleme - SADECE DİĞERLERİ BAŞARISIZ OLURSA"""
+        """unstructured.io ile gelişmiş belge yükleme"""
         if not UNSTRUCTURED_AVAILABLE:
             return []
             
@@ -330,12 +368,15 @@ class RAGProcessor:
                             "file_type": file_path.suffix,
                             "element_type": type(element).__name__,
                             "element_index": i,
-                            "loader_type": "unstructured"
+                            "loader_type": "unstructured",
+                            "token_count": self._count_tokens(content)  # Token sayısını ekle
                         }
                     )
                     documents.append(doc)
             
-            print(f"   ✅ {len(documents)} element çıkarıldı (Unstructured)")
+            if documents:
+                total_tokens = sum(doc.metadata.get('token_count', 0) for doc in documents)
+                print(f"   ✅ {len(documents)} element çıkarıldı (Unstructured) - Toplam ~{total_tokens} token")
             return documents
             
         except Exception as e:
@@ -343,13 +384,7 @@ class RAGProcessor:
             return []
     
     def _load_single_document(self, file_path: Path) -> List[Document]:
-        """
-        Tek bir belgeyi yükle
-        ÖNCELIK SIRASI:
-        1. PyMuPDF (PDF için en güvenilir)
-        2. LangChain Loaders
-        3. Unstructured.io (son çare)
-        """
+        """Tek bir belgeyi yükle"""
         print(f"📖 Yükleniyor: {file_path.name}")
         
         file_ext = file_path.suffix.lower()
@@ -379,17 +414,14 @@ class RAGProcessor:
     
     def load_and_process_documents(self, force_reprocess=False):
         """
-        Tüm belgeleri akıllı şekilde yükle ve işle
-        
-        Args:
-            force_reprocess: True ise tüm PDF'leri yeniden işle (varsayılan: False)
+        Tüm belgeleri akıllı şekilde yükle ve işle (TOKEN BAZLI)
         """
         if not CHROMA_AVAILABLE:
             print("❌ Chroma kullanılamadığı için belge işlenemiyor")
             return False
         
         print("\n" + "="*70)
-        print("🚀 AKILLI PDF YÖNETİMİ BAŞLATILIYOR")
+        print("🚀 MULTILINGUAL AKILLI PDF YÖNETİMİ BAŞLATILIYOR (TOKEN BAZLI)")
         print("="*70)
         
         # 1. PDFs klasöründeki mevcut dosyaları bul
@@ -447,7 +479,7 @@ class RAGProcessor:
         all_documents = []
         successful_files = 0
         failed_files = 0
-        empty_content_files = []  # Boş içerikli dosyalar
+        empty_content_files = []
         
         print("\n📖 Dosyalar yükleniyor...")
         for file_path in new_files_list:
@@ -466,7 +498,7 @@ class RAGProcessor:
         
         if empty_content_files:
             print(f"\n⚠️ İçerik Çıkarılamayan Dosyalar ({len(empty_content_files)}):")
-            for file_name in empty_content_files[:10]:  # İlk 10'unu göster
+            for file_name in empty_content_files[:10]:
                 print(f"   - {file_name}")
             if len(empty_content_files) > 10:
                 print(f"   ... ve {len(empty_content_files) - 10} dosya daha")
@@ -474,31 +506,42 @@ class RAGProcessor:
         
         if not all_documents:
             print("⚠️ Yeni yüklenecek doküman yok")
-            return True  # Silme işlemi başarılı olmuş olabilir
+            return True
         
-        # 7. Metinleri böl
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200
-        )
+        # 7. TOKEN BAZLI METİN BÖLME
+        print("\n✂️  TOKEN BAZLI metin bölme yapılıyor...")
+        text_splitter = self._create_token_text_splitter()
         chunks = text_splitter.split_documents(all_documents)
-        print(f"✂️ {len(chunks)} metin parçası oluşturuldu")
+        
+        # Token istatistiklerini hesapla
+        total_tokens = sum(self._count_tokens(chunk.page_content) for chunk in chunks)
+        avg_tokens = total_tokens // len(chunks) if chunks else 0
+        
+        print(f"✂️  {len(chunks)} metin parçası oluşturuldu")
+        print(f"📊 Token istatistikleri: Toplam ~{total_tokens} token, Ortalama ~{avg_tokens} token/parça")
+        
+        # Chunk boyutu analizi
+        chunk_sizes = [self._count_tokens(chunk.page_content) for chunk in chunks]
+        max_tokens = max(chunk_sizes) if chunk_sizes else 0
+        min_tokens = min(chunk_sizes) if chunk_sizes else 0
+        
+        print(f"📏 Chunk boyutları: Min {min_tokens}, Maks {max_tokens} token")
+        
+        if max_tokens > 1900:
+            print("⚠️ UYARI: Bazı chunk'lar 1900 token sınırına yaklaşıyor!")
+        elif max_tokens > 1500:
+            print("✅ Chunk boyutları optimum aralıkta")
         
         # Boş chunk kontrolü
         if len(chunks) == 0:
             print("⚠️ UYARI: Hiç metin parçası oluşturulamadı!")
-            print("   Muhtemel sebepler:")
-            print("   - PDF'ler taranmış görüntü (OCR gerekli)")
-            print("   - PDF'ler şifreli veya bozuk")
-            print("   - Dosyalarda metin içeriği yok")
-            print("\n✅ Silme işlemi tamamlandı ama yeni ekleme yapılamadı")
+            print("✅ Silme işlemi tamamlandı ama yeni ekleme yapılamadı")
             return True
         
         # 8. Vektör store'a ekle
         print("🔧 Yeni dokümanlar vektör veritabanına ekleniyor...")
         try:
             if self.vector_store is None:
-                # İlk kez oluşturuluyorsa
                 self.vector_store = Chroma.from_documents(
                     documents=chunks,
                     embedding=self.embeddings,
@@ -506,12 +549,11 @@ class RAGProcessor:
                 )
                 print("✅ Vektör veritabanı oluşturuldu!")
             else:
-                # Mevcut store'a ekle
                 self.vector_store.add_documents(chunks)
                 print("✅ Yeni dokümanlar eklendi!")
             
             print("\n" + "="*70)
-            print("🎉 İŞLEM TAMAMLANDI")
+            print("🎉 TOKEN BAZLI İŞLEM TAMAMLANDI")
             print("="*70)
             return True
             
@@ -527,7 +569,6 @@ class RAGProcessor:
             print("❌ Chroma kullanılamıyor!")
             return []
         
-        # Vektör store yoksa yüklemeyi dene
         if self.vector_store is None:
             print("🔄 Vektör veritabanı yeniden yükleniyor...")
             success = self._try_load_vector_store()
@@ -578,18 +619,25 @@ def print_system_info():
     print(f"LangChain Loaders Available: {FALLBACK_LOADERS_AVAILABLE}")
     print(f"Unstructured Available: {UNSTRUCTURED_AVAILABLE}")
     print(f"Chroma Available: {CHROMA_AVAILABLE}")
+    print(f"Tokenizer Available: {TOKENIZER_AVAILABLE}")
     print("=" * 70)
     print()
-        
+
 def main():
     """RAG Processor test fonksiyonu"""
     print_system_info()
     
-    print("🧪 AKILLI RAG PROCESSOR TEST EDİLİYOR...")
+    print("🧪 MULTILINGUAL AKILLI RAG PROCESSOR TEST EDİLİYOR... (TOKEN BAZLI)")
     print()
     
     # Processor'ı başlat
     processor = RAGProcessor()
+
+    # 🎯 MODEL BİLGİSİNİ GÖSTER
+    print(f"🔧 Kullanılan Model: {processor.model_name}")
+    if processor.tokenizer:
+        print(f"🔧 Token Limit: {processor.tokenizer.model_max_length}")
+    print()
     
     # Vektör store istatistiklerini göster
     if processor.vector_store is not None:
@@ -612,7 +660,10 @@ def main():
         if results:
             print("\n📄 İlk Sonuç:")
             print(f"Kaynak: {results[0].metadata.get('file_name', 'Bilinmiyor')}")
-            print(f"İçerik önizleme: {results[0].page_content[:200]}...")
+            content_preview = results[0].page_content[:200]
+            token_count = processor._count_tokens(results[0].page_content)
+            print(f"Token sayısı: {token_count}")
+            print(f"İçerik önizleme: {content_preview}...")
     else:
         print("\n❌ İşlem başarısız!")
 
