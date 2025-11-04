@@ -11,9 +11,10 @@ import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import uvicorn
+import re
 
 # Çıkışta API süreçlerini durdur
 api_process = None
@@ -250,11 +251,35 @@ def cleanup_apis():
 atexit.register(cleanup_apis)
 
 # API Endpoints and Frontend serving
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root():
-    """Serve the Frontend index.html at root so UI loads on 8001"""
+    """Serve the Frontend index.html at root so UI loads on 8001 with cache-busting"""
     index_path = os.path.join(PathConfig.FRONTEND_DIR, "index.html")
-    return FileResponse(index_path)
+    
+    # HTML dosyasını oku
+    with open(index_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    # Cache-busting için timestamp
+    timestamp = int(time.time())
+    cache_param = f"?v={timestamp}"
+    
+    # CSS ve JS dosya URL'lerine cache-busting parametresi ekle
+    # CSS dosyası için - mevcut query parametresi varsa değiştir, yoksa ekle
+    html_content = re.sub(
+        r'(href=["\']static/css/[^"\']+\.css)(\?v=\d+)?(["\'])',
+        rf'\1{cache_param}\3',
+        html_content
+    )
+    
+    # JS dosyası için - mevcut query parametresi varsa değiştir, yoksa ekle
+    html_content = re.sub(
+        r'(src=["\']static/js/[^"\']+\.js)(\?v=\d+)?(["\'])',
+        rf'\1{cache_param}\3',
+        html_content
+    )
+    
+    return HTMLResponse(content=html_content)
 
 @app.get("/manifest.json")
 async def manifest():
