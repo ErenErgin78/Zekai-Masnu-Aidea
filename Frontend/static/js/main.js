@@ -1,9 +1,10 @@
 class UmayChat {
     constructor() {
-        this.theme = localStorage.getItem('theme') || 'light';
+        this.theme = localStorage.getItem('theme') || 'default';
         this.messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
         this.isTyping = false;
         this.currentChatId = this.generateChatId();
+        this.charts = {}; // Grafikleri saklamak için
         
         this.init();
     }
@@ -82,6 +83,18 @@ class UmayChat {
         if (this.soilBtn) {
             this.soilBtn.addEventListener('click', () => this.loadSoilData());
         }
+        
+        // Örnek soru butonları
+        const exampleBtns = document.querySelectorAll('.example-question-btn');
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const question = e.target.dataset.question;
+                if (question) {
+                    this.messageInput.value = question;
+                    this.sendMessage();
+                }
+            });
+        });
     }
     
     setupTyping() {
@@ -101,6 +114,9 @@ class UmayChat {
         const message = this.messageInput.value.trim();
         if (!message || this.isTyping) return;
         
+        // Örnek soru butonlarını gizle
+        this.hideExampleQuestions();
+        
         // Kullanıcı mesajını ekle
         this.addMessage(message, 'user');
         this.messageInput.value = '';
@@ -109,14 +125,22 @@ class UmayChat {
         // Yazıyor göstergesini göster
         this.showTyping();
         
-        // Bot cevabını API'den al
+        // Bot cevabını API'den al ve streaming olarak göster
         try {
             const botResponse = await this.getBotResponse(message);
             this.hideTyping();
-            this.addMessage(botResponse, 'bot');
+            // Streaming olarak kelime kelime göster
+            this.streamMessage(botResponse, 'bot');
         } catch (error) {
             this.hideTyping();
             this.addMessage("Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.", 'bot');
+        }
+    }
+    
+    hideExampleQuestions() {
+        const exampleQuestions = document.getElementById('exampleQuestions');
+        if (exampleQuestions) {
+            exampleQuestions.style.display = 'none';
         }
     }
     
@@ -156,6 +180,93 @@ class UmayChat {
             .replace(/\*(.*?)\*/g, '<em>$1</em>');
     }
     
+    streamMessage(content, sender) {
+        // Mesajı streaming olarak kelime kelime göster
+        const message = {
+            content: '',
+            sender,
+            timestamp: new Date().toLocaleTimeString('tr-TR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }),
+            streaming: true
+        };
+        
+        // Mesaj div'ini oluştur
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        const bubbleId = 'streamingBubble_' + Date.now();
+        messageDiv.innerHTML = `
+            <div class="message-bubble" id="${bubbleId}"></div>
+            <div class="message-time">${message.timestamp}</div>
+        `;
+        
+        this.chatMessages.appendChild(messageDiv);
+        const bubbleElement = document.getElementById(bubbleId);
+        
+        // HTML etiketlerini koruyarak kelimelere ayır
+        // Önce HTML etiketlerini geçici placeholder'lara çevir
+        const tagPlaceholders = {};
+        let placeholderIndex = 0;
+        let processedContent = content;
+        
+        // HTML etiketlerini sakla ve placeholder'a çevir
+        processedContent = processedContent.replace(/<[^>]+>/g, (match) => {
+            const placeholder = `__HTMLTAG_${placeholderIndex}__`;
+            tagPlaceholders[placeholder] = match;
+            placeholderIndex++;
+            return placeholder;
+        });
+        
+        // Kelimelere ayır (boşluklar dahil)
+        const tokens = processedContent.split(/(\s+)/);
+        let currentIndex = 0;
+        
+        // Streaming fonksiyonu
+        const streamWord = () => {
+            if (currentIndex < tokens.length) {
+                // Token'ı al
+                let token = tokens[currentIndex];
+                
+                // Placeholder'ları gerçek HTML'e çevir
+                for (const [placeholder, tag] of Object.entries(tagPlaceholders)) {
+                    if (token.includes(placeholder)) {
+                        token = token.replace(placeholder, tag);
+                    }
+                }
+                
+                message.content += token;
+                
+                // Bubble'ı güncelle (formatMessage zaten HTML içeriği işliyor)
+                bubbleElement.innerHTML = this.formatMessage(message.content);
+                
+                // Scroll to bottom
+                this.scrollToBottom();
+                
+                currentIndex++;
+                
+                // Kelime hızı (msn cinsinden)
+                // Kelimeler için 50ms, boşluklar için 20ms, HTML etiketleri için 10ms
+                let delay = 50;
+                if (token.trim().length === 0) {
+                    delay = 20; // Boşluk
+                } else if (token.trim().startsWith('<')) {
+                    delay = 10; // HTML etiketi
+                }
+                
+                setTimeout(streamWord, delay);
+            } else {
+                // Streaming tamamlandı
+                message.streaming = false;
+                this.messages.push(message);
+                this.saveMessages();
+            }
+        };
+        
+        // Streaming'i başlat
+        streamWord();
+    }
+    
     showTyping() {
         this.isTyping = true;
         
@@ -173,7 +284,6 @@ class UmayChat {
         typingDiv.innerHTML = `
             <div class="message-bubble">
                 <div class="typing-indicator">
-                    <span>🤖</span>
                     <span class="typing-dots">
                         <span></span>
                         <span></span>
@@ -276,14 +386,18 @@ class UmayChat {
     }
     
     showWelcomeMessage() {
-        const welcomeMessage = document.createElement('div');
-        welcomeMessage.className = 'welcome-message';
-        welcomeMessage.innerHTML = `
-            <div class="welcome-icon">🤖</div>
-            <h3>Merhaba! Ben UMAY</h3>
-            <p>Tarım konusunda size yardımcı olabilirim. Sorularınızı sorun!</p>
-        `;
-        this.chatMessages.appendChild(welcomeMessage);
+        // Welcome mesajı HTML'de zaten var, burada sadece kontrol ediyoruz
+        const welcomeMessage = document.querySelector('.welcome-message');
+        if (!welcomeMessage) {
+            const div = document.createElement('div');
+            div.className = 'welcome-message';
+            div.innerHTML = `
+                <img src="static/img/logo.png" alt="UMAY Logo" class="welcome-logo">
+                <h3>Merhaba! Ben UMAY</h3>
+                <p>Tarım konusunda size yardımcı olabilirim. Sorularınızı sorun!</p>
+            `;
+            this.chatMessages.appendChild(div);
+        }
     }
     
     clearChat() {
@@ -299,6 +413,12 @@ class UmayChat {
         // Yeni chat başlat
         this.clearChat();
         this.showWelcomeMessage();
+        
+        // Örnek soruları göster
+        const exampleQuestions = document.getElementById('exampleQuestions');
+        if (exampleQuestions) {
+            exampleQuestions.style.display = 'flex';
+        }
         
         // Chat listesini güncelle (sadece UI)
         this.updateChatListUI();
@@ -330,16 +450,17 @@ class UmayChat {
         const savedChats = JSON.parse(localStorage.getItem('savedChats')) || [];
         const chatList = document.getElementById('chatList');
         
-        if (!chatList) return; // Chat list yoksa çık
+        if (!chatList) return;
         
         console.log('Loading chat history:', savedChats.length, 'chats');
         
         chatList.innerHTML = '';
         
-        savedChats.reverse().forEach(chat => {
+        savedChats.reverse().forEach((chat, index) => {
             const chatItem = document.createElement('div');
             chatItem.className = 'chat-item';
-            chatItem.dataset.chatId = chat.id; // Chat ID'sini data attribute olarak ekle
+            chatItem.dataset.chatId = chat.id;
+            chatItem.style.animationDelay = `${index * 0.05}s`;
             chatItem.innerHTML = `
                 <div class="chat-content">
                     <div class="chat-title">${chat.title}</div>
@@ -436,10 +557,11 @@ class UmayChat {
         
         chatList.innerHTML = '';
         
-        savedChats.reverse().forEach(chat => {
+        savedChats.reverse().forEach((chat, index) => {
             const chatItem = document.createElement('div');
             chatItem.className = 'chat-item';
             chatItem.dataset.chatId = chat.id;
+            chatItem.style.animationDelay = `${index * 0.05}s`;
             chatItem.innerHTML = `
                 <div class="chat-content">
                     <div class="chat-title">${chat.title}</div>
@@ -491,7 +613,12 @@ class UmayChat {
     }
     
     toggleTheme() {
-        this.theme = this.theme === 'light' ? 'dark' : 'light';
+        // 3 tema arasında döngü: default -> dark -> light -> default
+        const themes = ['default', 'dark', 'light'];
+        const currentIndex = themes.indexOf(this.theme);
+        const nextIndex = (currentIndex + 1) % themes.length;
+        this.theme = themes[nextIndex];
+        
         this.applyTheme();
         localStorage.setItem('theme', this.theme);
     }
@@ -500,13 +627,66 @@ class UmayChat {
         document.documentElement.setAttribute('data-theme', this.theme);
         
         const themeIcon = this.themeToggle.querySelector('.theme-icon');
-        themeIcon.textContent = this.theme === 'light' ? '🌙' : '☀️';
+        // Tema ikonları
+        const themeIcons = {
+            'default': '🌱', // Yeşil tema
+            'dark': '🌙',    // Koyu tema
+            'light': '☀️'    // Açık tema
+        };
+        themeIcon.textContent = themeIcons[this.theme] || '🎨';
+        
+        // Tema tooltip'i güncelle
+        const themeNames = {
+            'default': 'Default (Yeşil)',
+            'dark': 'Dark (Siyah)',
+            'light': 'Light (Açık)'
+        };
+        this.themeToggle.title = `Tema: ${themeNames[this.theme] || 'Bilinmiyor'}`;
     }
     
     toggleSidebar() {
         if (this.chatSidebar) {
             this.chatSidebar.classList.toggle('open');
         }
+    }
+    
+    getWeatherIcon(weatherCode) {
+        // Hava durumu koduna göre ikon döndür
+        if (!weatherCode) return '🌤️';
+        
+        const code = weatherCode.toLowerCase();
+        
+        // Türkçe hava durumu açıklamalarına göre eşleştirme
+        if (code.includes('kapalı') || code.includes('çok bulutlu') || code.includes('bulutlu')) {
+            return '☁️'; // Kapalı/Bulutlu
+        }
+        if (code.includes('açık') || code.includes('clear') || code.includes('güneşli')) {
+            return '☀️'; // Açık/Güneşli
+        }
+        if (code.includes('az bulutlu') || code.includes('partly') || code.includes('yarı')) {
+            return '⛅'; // Yarı bulutlu
+        }
+        if (code.includes('yağmur') || code.includes('rain')) {
+            return '🌧️'; // Yağmurlu
+        }
+        if (code.includes('sağanak') || code.includes('shower')) {
+            return '⛈️'; // Sağanak
+        }
+        if (code.includes('kar') || code.includes('snow')) {
+            return '❄️'; // Karlı
+        }
+        if (code.includes('sis') || code.includes('fog') || code.includes('mist')) {
+            return '🌫️'; // Sislı
+        }
+        if (code.includes('fırtına') || code.includes('thunder') || code.includes('storm')) {
+            return '⛈️'; // Fırtınalı
+        }
+        if (code.includes('rüzgar') || code.includes('wind')) {
+            return '💨'; // Rüzgarlı
+        }
+        
+        // Varsayılan
+        return '🌤️';
     }
     
     async loadWeatherData() {
@@ -538,58 +718,105 @@ class UmayChat {
             
             const weatherData = await response.json();
             
+            // Eski grafikleri temizle
+            if (this.charts.weatherChart) {
+                this.charts.weatherChart.destroy();
+            }
+            
+            // Hava durumu ikonu
+            const weatherIcon = this.getWeatherIcon(weatherData.weather_code);
+            
             // Hava panelini verilerle güncelle
             this.weatherContent.innerHTML = `
                 <div class="weather-data">
                     <div class="weather-main">
+                        <div class="weather-icon-large">${weatherIcon}</div>
                         <div class="weather-temp">${weatherData.temperature ? Math.round(weatherData.temperature) : 'N/A'}°C</div>
                         <div class="weather-desc">${weatherData.weather_code || 'N/A'}</div>
                     </div>
+                    <div class="weather-chart-container">
+                        <canvas id="weatherChart"></canvas>
+                    </div>
                     <div class="weather-details">
                         <div class="weather-item">
-                            <span class="weather-label">Hissedilen Min:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">🌡️</span>
+                                Hissedilen Min:
+                            </span>
                             <span class="weather-value">${weatherData.apparent_temperature_min ? Math.round(weatherData.apparent_temperature_min) : 'N/A'}°C</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Hissedilen Ort:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">🌡️</span>
+                                Hissedilen Ort:
+                            </span>
                             <span class="weather-value">${weatherData.apparent_temperature_mean ? Math.round(weatherData.apparent_temperature_mean) : 'N/A'}°C</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Hissedilen Max:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">🌡️</span>
+                                Hissedilen Max:
+                            </span>
                             <span class="weather-value">${weatherData.apparent_temperature_max ? Math.round(weatherData.apparent_temperature_max) : 'N/A'}°C</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Yağmur:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">🌧️</span>
+                                Yağmur:
+                            </span>
                             <span class="weather-value">${weatherData.rain_sum || 'N/A'} mm</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Sağanak:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">⛈️</span>
+                                Sağanak:
+                            </span>
                             <span class="weather-value">${weatherData.showers_sum || 'N/A'} mm</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Kar:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">❄️</span>
+                                Kar:
+                            </span>
                             <span class="weather-value">${weatherData.snowfall_sum || 'N/A'} mm</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Toplam Yağış:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">💧</span>
+                                Toplam Yağış:
+                            </span>
                             <span class="weather-value">${weatherData.precipitation_sum || 'N/A'} mm</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Rüzgar Max:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">💨</span>
+                                Rüzgar Max:
+                            </span>
                             <span class="weather-value">${weatherData.wind_speed_max || 'N/A'} km/h</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Rüzgar Böre:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">🌪️</span>
+                                Rüzgar Böre:
+                            </span>
                             <span class="weather-value">${weatherData.wind_gusts_max || 'N/A'} km/h</span>
                         </div>
                         <div class="weather-item">
-                            <span class="weather-label">Güneşlenme:</span>
+                            <span class="weather-label">
+                                <span class="weather-label-icon">☀️</span>
+                                Güneşlenme:
+                            </span>
                             <span class="weather-value">${weatherData.sunshine_duration ? Math.round(weatherData.sunshine_duration/3600) : 'N/A'} saat</span>
                         </div>
                     </div>
-                    <button class="panel-btn" onclick="this.loadWeatherData()">Yenile</button>
+                    <button class="panel-btn" onclick="umayChat.loadWeatherData()">Yenile</button>
                 </div>
             `;
+            
+            // 24 saatlik grafik oluştur (örnek veri)
+            setTimeout(() => {
+                this.createWeatherChart(weatherData);
+            }, 100);
             
         } catch (error) {
             console.error('Weather API hatası:', error);
@@ -597,10 +824,91 @@ class UmayChat {
                 <div class="panel-placeholder">
                     <div class="placeholder-icon">⚠️</div>
                     <p>Hava durumu bilgileri alınamadı</p>
-                    <button class="panel-btn" onclick="this.loadWeatherData()">Tekrar Dene</button>
+                    <button class="panel-btn" onclick="umayChat.loadWeatherData()">Tekrar Dene</button>
                 </div>
             `;
+        } finally {
+            // Butonu tekrar etkinleştir
+            if (this.weatherBtn) {
+                this.weatherBtn.disabled = false;
+                this.weatherBtn.textContent = 'Hava Durumu Al';
+            }
         }
+    }
+    
+    createWeatherChart(weatherData) {
+        const ctx = document.getElementById('weatherChart');
+        if (!ctx) return;
+        
+        // Örnek 24 saatlik veri (gerçek uygulamada API'den gelecek)
+        const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+        const temperatures = Array.from({length: 24}, () => {
+            const base = weatherData.temperature || 20;
+            return Math.round(base + (Math.random() * 10 - 5));
+        });
+        const precipitation = Array.from({length: 24}, () => Math.random() * 5);
+        
+        if (this.charts.weatherChart) {
+            this.charts.weatherChart.destroy();
+        }
+        
+        this.charts.weatherChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: hours.filter((_, i) => i % 3 === 0), // Her 3 saatte bir göster
+                datasets: [
+                    {
+                        label: 'Sıcaklık (°C)',
+                        data: temperatures.filter((_, i) => i % 3 === 0),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Yağış (mm)',
+                        data: precipitation.filter((_, i) => i % 3 === 0),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#EAEAEA',
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#A0A0A0', font: { size: 9 } },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    y: {
+                        ticks: { color: '#A0A0A0', font: { size: 9 } },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        ticks: { color: '#A0A0A0', font: { size: 9 } },
+                        grid: { drawOnChartArea: false }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
     }
     
     async loadSoilData() {
@@ -632,12 +940,26 @@ class UmayChat {
             
             const soilData = await response.json();
             
+            // Eski grafikleri temizle
+            Object.keys(this.charts).forEach(key => {
+                if (key.startsWith('soil')) {
+                    this.charts[key].destroy();
+                    delete this.charts[key];
+                }
+            });
+            
             // Toprak panelini verilerle güncelle
             let soilDetailsHTML = '';
+            let hasClay = false, hasSilt = false, hasSand = false;
             
             // Tüm özellikleri döngü ile ekle
             for (const [key, value] of Object.entries(soilData)) {
                 if (key !== 'soil_type' && key !== 'soil_code' && key !== 'description' && value !== 'N/A' && value !== null) {
+                    // Kil, silt, kum kontrolü (sadece Toprak Bileşimi grafiği için)
+                    if (key === 'Clay') hasClay = true;
+                    if (key === 'Silt') hasSilt = true;
+                    if (key === 'Sand') hasSand = true;
+                    
                     // Label'ı Türkçe'ye çevir
                     let label = key;
                     const labelMap = {
@@ -676,18 +998,45 @@ class UmayChat {
                 }
             }
             
+            // Grafikler için HTML - Sadece Toprak Bileşimi
+            let chartsHTML = '';
+            
+            // Kil/Silt/Kum Pie Chart (Toprak Bileşimi)
+            if (hasClay && hasSilt && hasSand) {
+                chartsHTML += `
+                    <div class="soil-chart-item">
+                        <div class="soil-chart-title">Toprak Bileşimi</div>
+                        <div class="soil-chart-canvas">
+                            <canvas id="soilCompositionChart"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+            
             this.soilContent.innerHTML = `
                 <div class="soil-data">
                     <div class="soil-main">
                         <div class="soil-type">${soilData.soil_type || 'Bilinmiyor'}</div>
                         <div class="soil-desc">${soilData.description || 'Toprak analizi yapılamadı'}</div>
                     </div>
+                    ${chartsHTML ? `<div class="soil-charts-container">${chartsHTML}</div>` : ''}
                     <div class="soil-details">
                         ${soilDetailsHTML}
                     </div>
-                    <button class="panel-btn" onclick="this.loadSoilData()">Yenile</button>
+                    <button class="panel-btn" onclick="umayChat.loadSoilData()">Yenile</button>
                 </div>
             `;
+            
+            // Grafikleri oluştur - Sadece Toprak Bileşimi
+            setTimeout(() => {
+                if (hasClay && hasSilt && hasSand) {
+                    this.createSoilCompositionChart(
+                        parseFloat(soilData['Clay']) || 0,
+                        parseFloat(soilData['Silt']) || 0,
+                        parseFloat(soilData['Sand']) || 0
+                    );
+                }
+            }, 200);
             
         } catch (error) {
             console.error('Soil API hatası:', error);
@@ -695,41 +1044,195 @@ class UmayChat {
                 <div class="panel-placeholder">
                     <div class="placeholder-icon">⚠️</div>
                     <p>Toprak analizi bilgileri alınamadı</p>
-                    <button class="panel-btn" onclick="this.loadSoilData()">Tekrar Dene</button>
+                    <button class="panel-btn" onclick="umayChat.loadSoilData()">Tekrar Dene</button>
                 </div>
             `;
+        } finally {
+            // Butonu tekrar etkinleştir
+            if (this.soilBtn) {
+                this.soilBtn.disabled = false;
+                this.soilBtn.textContent = 'Toprak Analizi Al';
+            }
         }
+    }
+    
+    createPHGauge(pHValue) {
+        const canvas = document.getElementById('soilPHGauge');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 60;
+        
+        // pH değerine göre renk (0-14 arası)
+        const normalizedValue = Math.max(0, Math.min(14, pHValue)) / 14;
+        const angle = Math.PI * normalizedValue; // 0-180 derece
+        
+        // Renk gradyanı (asit: kırmızı, nötr: yeşil, baz: mavi)
+        let color;
+        if (pHValue < 7) {
+            color = `rgba(${255}, ${Math.round(255 * (pHValue / 7))}, 0, 0.8)`;
+        } else if (pHValue === 7) {
+            color = '#10b981';
+        } else {
+            color = `rgba(0, ${Math.round(255 * ((14 - pHValue) / 7))}, 255, 0.8)`;
+        }
+        
+        // Arka plan yay
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + 20, radius, Math.PI, 0, false);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 15;
+        ctx.stroke();
+        
+        // Değer yayı
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + 20, radius, Math.PI, Math.PI - angle, false);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 15;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        
+        // İşaretler
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i <= 14; i++) {
+            const markAngle = Math.PI - (Math.PI * i / 14);
+            const x1 = centerX + Math.cos(markAngle) * (radius - 10);
+            const y1 = centerY + 20 + Math.sin(markAngle) * (radius - 10);
+            const x2 = centerX + Math.cos(markAngle) * (radius + 5);
+            const y2 = centerY + 20 + Math.sin(markAngle) * (radius + 5);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+    }
+    
+    createSoilCompositionChart(clay, silt, sand) {
+        const ctx = document.getElementById('soilCompositionChart');
+        if (!ctx) return;
+        
+        const total = clay + silt + sand;
+        if (total === 0) return;
+        
+        if (this.charts.soilCompositionChart) {
+            this.charts.soilCompositionChart.destroy();
+        }
+        
+        this.charts.soilCompositionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Kil', 'Silt', 'Kum'],
+                datasets: [{
+                    data: [clay, silt, sand],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#3b82f6',
+                        '#f59e0b'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#EAEAEA',
+                            font: { size: 11 },
+                            padding: 15
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    createSoilDensityChart(bulkDensity, refBulkDensity) {
+        const ctx = document.getElementById('soilDensityChart');
+        if (!ctx) return;
+        
+        if (this.charts.soilDensityChart) {
+            this.charts.soilDensityChart.destroy();
+        }
+        
+        this.charts.soilDensityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Mevcut Yoğunluk', 'Referans Yoğunluk'],
+                datasets: [{
+                    label: 'Yoğunluk (g/cm³)',
+                    data: [bulkDensity, refBulkDensity],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)'
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#3b82f6'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 10 }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 10 }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
     }
 }
 
+// Global instance
+let umayChat;
+
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new UmayChat();
+    umayChat = new UmayChat();
 });
 
-// Add typing indicator styles
-const style = document.createElement('style');
-style.textContent = `
-    .typing-indicator {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-    }
-    
-    .typing-indicator span {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--text-muted);
-        animation: typing 1.4s infinite ease-in-out;
-    }
-    
-    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-    
-    @keyframes typing {
-        0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-        40% { transform: scale(1); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);
+// Typing indicator stilleri CSS'te zaten var, ek bir stil gerekmiyor

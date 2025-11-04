@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UMAY - Tarım Asistanı</title>
     <meta name="description" content="Yapay zeka destekli tarım asistanı">
-    <meta name="theme-color" content="#1a1a1a">
+    <meta name="theme-color" content="#0a1e1a">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <!-- Styles -->
     <link rel="stylesheet" href="static/css/styles.css">
@@ -18,6 +21,14 @@
 <body>
     <!-- Ana kapsayıcı -->
     <div class="app-container">
+        <!-- UMAY Logo -->
+        <img src="static/img/UMAY.png" alt="UMAY" class="main-logo">
+        
+        <!-- Tema Butonu -->
+        <button id="themeToggle" class="theme-btn-top" title="Tema Değiştir">
+            <span class="theme-icon">🎨</span>
+        </button>
+        
         <!-- Sohbet kenar çubuğu düğmesi -->
         <button id="sidebarToggle" class="sidebar-toggle">
             <span class="sidebar-icon">☰</span>
@@ -37,7 +48,7 @@
         <!-- Ana paneller kapsayıcısı -->
         <div class="panels-container">
             <!-- Hava durumu paneli (sol) -->
-            <div class="info-panel weather-panel">
+            <div class="info-panel weather-panel glass-card">
                 <div class="panel-header">
                     <h3>🌤️ Hava Durumu</h3>
                 </div>
@@ -51,42 +62,35 @@
             </div>
             
             <!-- Sohbet alanı (orta) -->
-            <div class="chat-container">
-            <!-- Sohbet başlığı -->
-            <div class="chat-header">
-                <div class="chat-title">
-                    <span class="title-icon">🌱</span>
-                    <h1>UMAY</h1>
-                </div>
-                <div class="theme-toggle">
-                    <button id="themeToggle" class="theme-btn">
-                        <span class="theme-icon">🌙</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Sohbet mesajları -->
-            <div class="chat-messages" id="chatMessages">
+            <div class="chat-container glass-card">
+                <!-- Sohbet mesajları -->
+                <div class="chat-messages" id="chatMessages">
                 <div class="welcome-message">
-                    <div class="welcome-icon">🤖</div>
+                    <img src="static/img/logo.png" alt="UMAY Logo" class="welcome-logo">
                     <h3>Merhaba! Ben UMAY</h3>
                     <p>Tarım konusunda size yardımcı olabilirim. Sorularınızı sorun!</p>
+                        <div class="example-questions" id="exampleQuestions">
+                            <button class="example-question-btn" data-question="Hangi sebzeler şu mevsimde ekilir?">Hangi sebzeler şu mevsimde ekilir?</button>
+                            <button class="example-question-btn" data-question="Toprağımı nasıl iyileştirebilirim?">Toprağımı nasıl iyileştirebilirim?</button>
+                            <button class="example-question-btn" data-question="Sulama için ne kadar su kullanmalıyım?">Sulama için ne kadar su kullanmalıyım?</button>
+                            <button class="example-question-btn" data-question="Gübreleme nasıl yapılır?">Gübreleme nasıl yapılır?</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Sohbet giriş alanı -->
-            <div class="chat-input-container">
-                <div class="chat-input-wrapper">
-                    <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." autocomplete="off">
-                    <button id="sendButton" class="send-btn">
-                        <span class="send-icon">📤</span>
-                    </button>
+                
+                <!-- Sohbet giriş alanı -->
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." autocomplete="off">
+                        <button id="sendButton" class="send-btn">
+                            <span class="send-icon">📤</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
             </div>
             
             <!-- Toprak analizi paneli (sağ) -->
-            <div class="info-panel soil-panel">
+            <div class="info-panel soil-panel glass-card">
                 <div class="panel-header">
                     <h3>🌱 Toprak Analizi</h3>
                 </div>
