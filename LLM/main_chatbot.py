@@ -146,13 +146,14 @@ async def start_soil_api():
         print(f"🔍 Virtual environment Python: {env_python}")
         
         # Uvicorn'u subprocess olarak başlat ve global değişkene kaydet
+        # stdout/stderr'i DEVNULL'a yönlendir - buffer dolmasını önler ve API'lerin kapanmasını engeller
         api_process = subprocess.Popen([
             env_python, "-m", "uvicorn", 
             "main:app",
             "--host", "0.0.0.0", 
             "--port", "8000",
             "--reload"
-        ], cwd=api_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ], cwd=api_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         # Başlatılmasını bekle
         print("⏳ Soil+Weather API başlatılıyor...")
@@ -201,9 +202,10 @@ async def start_ml_api():
             print(f"❌ Virtual environment bulunamadı: {env_python}")
             return False
 
+        # stdout/stderr'i DEVNULL'a yönlendir - buffer dolmasını önler ve API'lerin kapanmasını engeller
         proc = subprocess.Popen([
             env_python, "ml_api.py"
-        ], cwd=ml_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ], cwd=ml_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         # Yükselebilmesi için bekle
         import time
@@ -224,10 +226,6 @@ async def start_ml_api():
         return False
     except Exception as e:
         print(f"❌ ML API başlatma hatası: {e}")
-        return False
-        
-    except Exception as e:
-        print(f"❌ Soil+Weather API başlatma hatası: {e}")
         return False
 
 

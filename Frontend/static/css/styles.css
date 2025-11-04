@@ -21,11 +21,11 @@
     --accent-hover: #059669;
     --accent-light: rgba(16, 185, 129, 0.2);
     
-    /* Border ve Shadow */
+    /* Border ve Shadow - Responsive */
     --border-color: rgba(255, 255, 255, 0.1);
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.5);
+    --shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 1.5625rem 3.125rem rgba(0, 0, 0, 0.5);
     
     /* Input */
     --input-bg: rgba(255, 255, 255, 0.05);
@@ -36,10 +36,10 @@
     --message-bot: rgba(255, 255, 255, 0.08);
     --message-text: #EAEAEA;
     
-    /* Köşe Yuvarlaklığı */
-    --radius-sm: 12px;
-    --radius-md: 16px;
-    --radius-lg: 20px;
+    /* Köşe Yuvarlaklığı - Responsive */
+    --radius-sm: 0.75rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.25rem;
 }
 
 /* Dark Theme (Saf Siyah) */
@@ -107,9 +107,9 @@
     box-sizing: border-box;
 }
 
-/* Base Styles */
+/* Base Styles - Responsive Font Size */
 html {
-    font-size: 16px;
+    font-size: clamp(14px, 1vw, 18px); /* Responsive font size: min 14px, ideal 1vw, max 18px */
     scroll-behavior: smooth;
 }
 
@@ -149,29 +149,28 @@ body {
     flex-direction: column;
     background: var(--bg-primary);
     position: relative;
-    padding: 0.5rem 2rem 2rem; /* Üstten minimum boşluk, sayfanın tavanına yakın */
+    padding: clamp(0.5rem, 1.5vh, 1rem) clamp(1rem, 3vw, 2rem) clamp(1rem, 3vh, 2rem);
     align-items: center;
 }
 
 /* Main Logo */
 .main-logo {
-    height: min(12vh, 9.6vw); /* %20 küçültülmüş: 15vh*0.8, 12vw*0.8 */
-    max-height: 106px; /* 133px * 0.8 = ~106px */
+    height: clamp(8vh, 9.6vw, 12vh);
     width: auto;
     object-fit: contain;
-    margin: 0.5rem auto 1rem; /* Üstten daha az boşluk, sayfanın tavanına yakın */
+    margin: clamp(0.5rem, 1vh, 1rem) auto clamp(0.75rem, 2vh, 1rem);
     animation: fadeInDown 0.6s ease;
     z-index: 1;
 }
 
 .theme-btn-top {
     position: fixed;
-    top: 1.5rem;
-    right: 2rem;
+    top: clamp(1rem, 2vh, 1.5rem);
+    right: clamp(1rem, 3vw, 2rem);
     background: var(--bg-glass);
     border: 1px solid var(--border-color);
     cursor: pointer;
-    padding: 0.75rem;
+    padding: clamp(0.5rem, 1.2vw, 0.75rem);
     border-radius: var(--radius-md);
     transition: all 0.3s ease;
     color: var(--text-secondary);
@@ -187,13 +186,13 @@ body {
 }
 
 .theme-btn-top .theme-icon {
-    font-size: 1.5rem;
+    font-size: clamp(1.2rem, 2.5vw, 1.5rem);
 }
 
 @keyframes fadeInDown {
     from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(clamp(-1rem, -2vh, -1.25rem));
     }
     to {
         opacity: 1;
@@ -204,25 +203,25 @@ body {
 /* Panels Container */
 .panels-container {
     display: flex;
-    gap: 1.5rem;
-    width: min(95vw, 1540px); /* %10 büyütülmüş: 1400px * 1.1 = 1540px, viewport genişliğinin %95'i */
-    max-width: 1540px; /* %10 büyütülmüş max-width */
+    gap: clamp(1rem, 2vw, 1.5rem);
+    width: min(95vw, 96.25rem); /* 1540px = 96.25rem */
+    max-width: 96.25rem;
     align-items: stretch;
     justify-content: center;
-    margin-top: 2rem;
+    margin-top: clamp(1rem, 3vh, 2rem);
 }
 
 /* Sidebar Toggle Button */
 .sidebar-toggle {
     position: fixed;
-    top: 1rem;
-    left: 1rem;
+    top: clamp(0.75rem, 1.5vh, 1rem);
+    left: clamp(0.75rem, 1.5vw, 1rem);
     z-index: 1000;
     background: var(--accent);
     border: none;
     border-radius: var(--radius-md);
-    width: 45px;
-    height: 45px;
+    width: clamp(2.5rem, 5vw, 2.8125rem);
+    height: clamp(2.5rem, 5vw, 2.8125rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -240,15 +239,15 @@ body {
 }
 
 .sidebar-icon {
-    font-size: 1.3rem;
+    font-size: clamp(1rem, 2.2vw, 1.3rem);
 }
 
 /* Chat Sidebar */
 .chat-sidebar {
     position: fixed;
     top: 0;
-    left: -320px;
-    width: 320px;
+    left: clamp(-20rem, -80vw, -320px);
+    width: clamp(17.5rem, 80vw, 20rem);
     height: 100vh;
     background: var(--bg-glass);
     backdrop-filter: blur(20px);
@@ -267,26 +266,26 @@ body {
 }
 
 .chat-header-sidebar {
-    padding: 1.5rem;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-glass);
 }
 
 .chat-header-sidebar h3 {
-    font-size: 1.25rem;
+    font-size: clamp(1rem, 2.2vw, 1.25rem);
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 1rem;
+    margin-bottom: clamp(0.75rem, 1.5vh, 1rem);
 }
 
 .new-chat-btn {
     width: 100%;
-    padding: 0.875rem;
+    padding: clamp(0.75rem, 1.5vw, 0.875rem);
     background: var(--accent);
     color: white;
     border: none;
     border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -301,12 +300,12 @@ body {
 
 .chat-list {
     flex: 1;
-    padding: 1rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem);
 }
 
 .chat-item {
-    padding: 1rem;
-    margin-bottom: 0.75rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem);
+    margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
     background: var(--bg-glass);
     backdrop-filter: blur(10px);
     border-radius: var(--radius-md);
@@ -316,7 +315,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: clamp(0.375rem, 0.8vw, 0.5rem);
     animation: slideInLeft 0.4s ease backwards;
 }
 
@@ -333,17 +332,17 @@ body {
 }
 
 .chat-title {
-    font-size: 0.95rem;
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
     font-weight: 500;
     color: var(--text-primary);
-    margin-bottom: 0.25rem;
+    margin-bottom: clamp(0.125rem, 0.3vh, 0.25rem);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .chat-time {
-    font-size: 0.75rem;
+    font-size: clamp(0.65rem, 1.4vw, 0.75rem);
     color: var(--text-secondary);
 }
 
@@ -351,7 +350,7 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
+    padding: clamp(0.375rem, 0.8vw, 0.5rem);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
     transition: all 0.2s ease;
@@ -372,10 +371,10 @@ body {
 
 /* Info Panels */
 .info-panel {
-    width: min(24vw, 304px); /* 380px * 0.8 = 304px, viewport genişliğinin %24'ü */
-    height: min(80vh, 600px); /* 750px * 0.8 = 600px, viewport yüksekliğinin %80'i */
-    max-width: 304px;
-    max-height: 600px;
+    width: min(26.4vw, 20.9rem); /* %10 büyütülmüş: 24vw*1.1=26.4vw, 19rem*1.1=20.9rem */
+    height: min(80vh, 37.5rem);
+    max-width: 20.9rem; /* %10 büyütülmüş: 19rem*1.1=20.9rem */
+    max-height: 37.5rem;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -393,7 +392,7 @@ body {
 }
 
 .panel-header {
-    padding: 1.5rem 2rem;
+    padding: clamp(0.8rem, 2vh, 1.2rem) clamp(1rem, 2.4vw, 1.6rem); /* %20 küçültülmüş */
     background: var(--bg-glass);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
@@ -401,7 +400,7 @@ body {
 }
 
 .panel-header h3 {
-    font-size: 1.5rem;
+    font-size: clamp(1.125rem, 2.5vw, 1.5rem);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -409,7 +408,7 @@ body {
 
 .panel-content {
     flex: 1;
-    padding: 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin;
@@ -417,7 +416,7 @@ body {
 }
 
 .panel-content::-webkit-scrollbar {
-    width: 6px;
+    width: clamp(0.25rem, 0.5vw, 0.375rem);
 }
 
 .panel-content::-webkit-scrollbar-track {
@@ -426,7 +425,7 @@ body {
 
 .panel-content::-webkit-scrollbar-thumb {
     background: var(--accent);
-    border-radius: 3px;
+    border-radius: clamp(0.125rem, 0.3vw, 0.1875rem);
 }
 
 .panel-placeholder {
@@ -440,19 +439,19 @@ body {
 }
 
 .placeholder-icon {
-    font-size: 5rem;
-    margin-bottom: 1.5rem;
+    font-size: clamp(3rem, 8vw, 5rem);
+    margin-bottom: clamp(1rem, 2.5vh, 1.5rem);
     animation: float 3s ease-in-out infinite;
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(clamp(-0.5rem, -1vh, -0.625rem)); }
 }
 
 .panel-placeholder p {
-    font-size: 1.1rem;
-    margin-bottom: 1.5rem;
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
+    margin-bottom: clamp(1rem, 2.5vh, 1.5rem);
     line-height: 1.6;
     color: var(--text-secondary);
 }
@@ -462,8 +461,8 @@ body {
     color: white;
     border: none;
     border-radius: var(--radius-md);
-    padding: 0.875rem 2rem;
-    font-size: 1rem;
+    padding: clamp(0.75rem, 1.5vw, 0.875rem) clamp(1.5rem, 3vw, 2rem);
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -487,19 +486,19 @@ body {
 .weather-data {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: clamp(1rem, 2.5vh, 1.5rem);
     height: 100%;
 }
 
 .weather-main {
     text-align: center;
-    padding: 1.5rem 0;
+    padding: clamp(1rem, 2.5vh, 1.5rem) 0;
     border-bottom: 1px solid var(--border-color);
 }
 
 .weather-icon-large {
-    font-size: 5rem;
-    margin-bottom: 1rem;
+    font-size: clamp(3rem, 8vw, 5rem);
+    margin-bottom: clamp(0.75rem, 1.5vh, 1rem);
     animation: weatherPulse 2s ease-in-out infinite;
 }
 
@@ -509,10 +508,10 @@ body {
 }
 
 .weather-temp {
-    font-size: 3rem;
+    font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 0.5rem;
+    margin-bottom: clamp(0.375rem, 0.8vh, 0.5rem);
     background: linear-gradient(135deg, var(--accent), #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -520,31 +519,31 @@ body {
 }
 
 .weather-desc {
-    font-size: 1.1rem;
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
     color: var(--text-secondary);
     text-transform: capitalize;
     font-weight: 500;
 }
 
 .weather-chart-container {
-    margin: 1rem 0;
-    padding: 1rem;
+    margin: clamp(0.75rem, 1.5vh, 1rem) 0;
+    padding: clamp(0.75rem, 1.5vw, 1rem);
     background: var(--bg-glass);
     border-radius: var(--radius-md);
-    height: 150px;
+    height: clamp(9.375rem, 20vh, 9.375rem);
 }
 
 .weather-details {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: clamp(0.75rem, 1.5vh, 1rem);
 }
 
 .weather-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem;
+    padding: clamp(0.5rem, 1.2vw, 0.75rem);
     background: var(--bg-glass);
     border-radius: var(--radius-sm);
     transition: all 0.2s ease;
@@ -556,20 +555,20 @@ body {
 }
 
 .weather-label {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1.7vw, 0.9rem);
     color: var(--text-secondary);
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: clamp(0.375rem, 0.8vw, 0.5rem);
 }
 
 .weather-label-icon {
-    font-size: 1.1rem;
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
 }
 
 .weather-value {
-    font-size: 1rem;
+    font-size: clamp(0.85rem, 1.7vw, 0.95rem); /* Biraz küçültülmüş */
     color: var(--text-primary);
     font-weight: 600;
 }
@@ -578,25 +577,25 @@ body {
 .soil-data {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: clamp(1rem, 2.5vh, 1.5rem);
     height: 100%;
 }
 
 .soil-main {
     text-align: center;
-    padding: 1.5rem 0;
+    padding: clamp(1rem, 2.5vh, 1.5rem) 0;
     border-bottom: 1px solid var(--border-color);
 }
 
 .soil-type {
-    font-size: 1.5rem;
+    font-size: clamp(1.125rem, 2.5vw, 1.5rem);
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 0.5rem;
+    margin-bottom: clamp(0.375rem, 0.8vh, 0.5rem);
 }
 
 .soil-desc {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1.7vw, 0.9rem);
     color: var(--text-secondary);
     line-height: 1.5;
 }
@@ -604,42 +603,44 @@ body {
 .soil-charts-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: clamp(1rem, 2.5vh, 1.5rem);
 }
 
 .soil-chart-item {
     background: var(--bg-glass);
     border-radius: var(--radius-md);
-    padding: 1rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem);
     border: 1px solid var(--border-color);
 }
 
 .soil-chart-title {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1.7vw, 0.9rem);
     color: var(--text-secondary);
-    margin-bottom: 0.75rem;
+    margin-bottom: clamp(0.5rem, 1.2vh, 0.75rem);
     font-weight: 500;
 }
 
 .soil-chart-canvas {
     position: relative;
-    height: 120px;
+    height: clamp(7.5rem, 15vh, 7.5rem);
 }
 
 .soil-details {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: clamp(0.5rem, 1.2vh, 0.75rem);
 }
 
 .soil-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem;
+    padding: clamp(0.5rem, 1.2vw, 0.75rem);
     background: var(--bg-glass);
     border-radius: var(--radius-sm);
     transition: all 0.2s ease;
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+    min-width: 0; /* Flex item'ların shrink olmasını sağla */
 }
 
 .soil-item:hover {
@@ -648,30 +649,38 @@ body {
 }
 
 .soil-label {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1.7vw, 0.9rem);
     color: var(--text-secondary);
     font-weight: 500;
+    flex: 1;
+    min-width: 0; /* Flex item'ın shrink olmasını sağla */
+    white-space: nowrap; /* Alt satıra geçmesini önle */
+    overflow: hidden; /* Taşan metni gizle */
+    text-overflow: ellipsis; /* Taşan metne "..." ekle */
 }
 
 .soil-value {
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
     color: var(--text-primary);
     font-weight: 600;
+    flex-shrink: 0; /* Değer kısmının küçülmesini önle */
+    white-space: nowrap; /* Alt satıra geçmesini önle */
+    text-align: right; /* Değerleri sağa hizala */
 }
 
 /* Progress Bar */
 .progress-bar-container {
-    margin-top: 0.5rem;
-    height: 8px;
+    margin-top: clamp(0.375rem, 0.8vh, 0.5rem);
+    height: clamp(0.375rem, 0.8vh, 0.5rem);
     background: var(--bg-glass);
-    border-radius: 4px;
+    border-radius: clamp(0.1875rem, 0.4vw, 0.25rem);
     overflow: hidden;
 }
 
 .progress-bar {
     height: 100%;
     background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-    border-radius: 4px;
+    border-radius: clamp(0.1875rem, 0.4vw, 0.25rem);
     transition: width 1s ease;
     animation: progressFill 1s ease;
 }
@@ -684,7 +693,7 @@ body {
 .gauge-container {
     position: relative;
     width: 100%;
-    height: 120px;
+    height: clamp(7.5rem, 15vh, 7.5rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -692,17 +701,17 @@ body {
 
 .gauge-value {
     position: absolute;
-    font-size: 1.5rem;
+    font-size: clamp(1.125rem, 2.5vw, 1.5rem);
     font-weight: 700;
     color: var(--text-primary);
 }
 
 /* Chat Container */
 .chat-container {
-    width: min(48vw, 600px); /* 750px * 0.8 = 600px, viewport genişliğinin %48'i */
-    height: min(80vh, 600px); /* 750px * 0.8 = 600px, viewport yüksekliğinin %80'i */
-    max-width: 600px;
-    max-height: 600px;
+    width: min(48vw, 37.5rem);
+    height: min(80vh, 37.5rem);
+    max-width: 37.5rem;
+    max-height: 37.5rem;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -717,7 +726,7 @@ body {
     background: var(--bg-glass);
     border: 1px solid var(--border-color);
     cursor: pointer;
-    padding: 0.75rem;
+    padding: clamp(0.5rem, 1.2vw, 0.75rem);
     border-radius: var(--radius-md);
     transition: all 0.3s ease;
     color: var(--text-secondary);
@@ -731,23 +740,23 @@ body {
 }
 
 .theme-icon {
-    font-size: 1.5rem;
+    font-size: clamp(1.2rem, 2.5vw, 1.5rem);
 }
 
 /* Chat Messages */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: clamp(0.875rem, 2vh, 1.25rem);
     scrollbar-width: thin;
     scrollbar-color: var(--accent) transparent;
 }
 
 .chat-messages::-webkit-scrollbar {
-    width: 6px;
+    width: clamp(0.25rem, 0.5vw, 0.375rem);
 }
 
 .chat-messages::-webkit-scrollbar-track {
@@ -756,25 +765,25 @@ body {
 
 .chat-messages::-webkit-scrollbar-thumb {
     background: var(--accent);
-    border-radius: 3px;
+    border-radius: clamp(0.125rem, 0.3vw, 0.1875rem);
 }
 
 /* Welcome Message */
 .welcome-message {
     text-align: center;
-    padding: 2rem 1rem;
+    padding: clamp(1.25rem, 3vh, 2rem) clamp(0.75rem, 1.5vw, 1rem);
     color: var(--text-secondary);
 }
 
 .welcome-logo {
-    width: min(25vh, 20vw); /* 360px / 2 = 180px, responsive oran */
-    height: min(25vh, 20vw); /* 360px / 2 = 180px, responsive oran */
-    max-width: 180px; /* Yarı yarıya küçültülmüş: 360px / 2 */
-    max-height: 180px; /* Yarı yarıya küçültülmüş: 360px / 2 */
+    width: min(26.25vh, 21vw); /* %5 büyütülmüş: 25vh*1.05=26.25vh, 20vw*1.05=21vw */
+    height: min(26.25vh, 21vw); /* %5 büyütülmüş */
+    max-width: clamp(10.5rem, 26.25vw, 11.8125rem); /* %5 büyütülmüş: 10rem*1.05=10.5rem, 25vw*1.05=26.25vw, 11.25rem*1.05=11.8125rem */
+    max-height: clamp(10.5rem, 26.25vw, 11.8125rem); /* %5 büyütülmüş */
     object-fit: contain;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto clamp(1rem, 2.5vh, 1.5rem);
     animation: float 3s ease-in-out infinite;
-    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+    filter: drop-shadow(0 clamp(0.5rem, 1.5vw, 0.625rem) clamp(1rem, 2.5vw, 1.25rem) rgba(0, 0, 0, 0.3));
 }
 
 .welcome-icon {
@@ -782,34 +791,34 @@ body {
 }
 
 .welcome-message h3 {
-    font-size: 1.75rem;
+    font-size: clamp(1.375rem, 3vw, 1.75rem);
     font-weight: 600;
-    margin-bottom: 0.75rem;
+    margin-bottom: clamp(0.5rem, 1.2vh, 0.75rem);
     color: var(--text-primary);
 }
 
 .welcome-message p {
-    font-size: 1.1rem;
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
     color: var(--text-secondary);
-    margin-bottom: 2rem;
+    margin-bottom: clamp(1.25rem, 3vh, 2rem);
 }
 
 /* Example Questions */
 .example-questions {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    max-width: 500px;
+    gap: clamp(0.5rem, 1.2vh, 0.75rem);
+    max-width: clamp(18.75rem, 40vw, 31.25rem);
     margin: 0 auto;
 }
 
 .example-question-btn {
-    padding: 0.875rem 1.5rem;
+    padding: clamp(0.75rem, 1.5vw, 0.875rem) clamp(1.25rem, 2.5vw, 1.5rem);
     background: var(--bg-glass);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     color: var(--text-primary);
-    font-size: 0.95rem;
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: left;
@@ -828,7 +837,7 @@ body {
 .message {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: clamp(0.375rem, 0.8vh, 0.5rem);
     max-width: 80%;
     animation: messageSlide 0.4s ease;
 }
@@ -842,9 +851,9 @@ body {
 }
 
 .message-bubble {
-    padding: 1rem 1.25rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem) clamp(0.875rem, 2vw, 1.25rem);
     border-radius: var(--radius-md);
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
     line-height: 1.6;
     word-wrap: break-word;
 }
@@ -852,27 +861,27 @@ body {
 .message.user .message-bubble {
     background: var(--message-user);
     color: white;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: clamp(0.1875rem, 0.4vw, 0.25rem);
     box-shadow: var(--shadow);
 }
 
 .message.bot .message-bubble {
     background: var(--message-bot);
     color: var(--message-text);
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: clamp(0.1875rem, 0.4vw, 0.25rem);
     border: 1px solid var(--border-color);
 }
 
 .message-time {
-    font-size: 0.75rem;
+    font-size: clamp(0.65rem, 1.4vw, 0.75rem);
     color: var(--text-secondary);
     align-self: flex-end;
-    padding: 0 0.5rem;
+    padding: 0 clamp(0.375rem, 0.8vw, 0.5rem);
 }
 
 /* Chat Input */
 .chat-input-container {
-    padding: 1.5rem 2rem;
+    padding: clamp(0.8rem, 2vh, 1.2rem) clamp(1rem, 2.4vw, 1.6rem); /* %20 küçültülmüş */
     background: var(--bg-glass);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-color);
@@ -880,18 +889,18 @@ body {
 
 .chat-input-wrapper {
     display: flex;
-    gap: 1rem;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
     align-items: center;
 }
 
 #messageInput {
     flex: 1;
-    padding: 1rem 1.5rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1rem, 2.5vw, 1.5rem);
     border: 1px solid var(--input-border);
     border-radius: var(--radius-lg);
     background: var(--input-bg);
     color: var(--text-primary);
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
     outline: none;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
@@ -899,7 +908,7 @@ body {
 
 #messageInput:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light);
+    box-shadow: 0 0 0 clamp(0.125rem, 0.3vw, 0.1875rem) var(--accent-light);
     background: var(--bg-glass-hover);
 }
 
@@ -918,8 +927,8 @@ body {
     background: var(--accent);
     border: none;
     border-radius: 50%;
-    width: 50px;
-    height: 50px;
+    width: clamp(3rem, 6vw, 3.125rem);
+    height: clamp(3rem, 6vw, 3.125rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -943,27 +952,27 @@ body {
 }
 
 .send-icon {
-    font-size: 1.2rem;
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
 }
 
 /* Typing Indicator */
 .typing-indicator {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: clamp(0.375rem, 0.8vw, 0.5rem);
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
 }
 
 .typing-dots {
     display: inline-flex !important;
-    gap: 6px;
+    gap: clamp(0.25rem, 0.5vw, 0.375rem);
     align-items: center;
 }
 
 .typing-dots span {
-    width: 8px !important;
-    height: 8px !important;
+    width: clamp(0.4rem, 0.8vw, 0.5rem) !important;
+    height: clamp(0.4rem, 0.8vw, 0.5rem) !important;
     border-radius: 50%;
     background: var(--accent) !important;
     animation: typingPulse 1.2s infinite ease-in-out;
@@ -1002,7 +1011,7 @@ body {
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(clamp(1.5rem, 4vh, 1.875rem));
     }
     to {
         opacity: 1;
@@ -1013,7 +1022,7 @@ body {
 @keyframes slideInLeft {
     from {
         opacity: 0;
-        transform: translateX(-20px);
+        transform: translateX(clamp(-1rem, -2.5vw, -1.25rem));
     }
     to {
         opacity: 1;
@@ -1024,7 +1033,7 @@ body {
 @keyframes messageSlide {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(clamp(0.5rem, 1.2vh, 0.625rem));
     }
     to {
         opacity: 1;
@@ -1033,170 +1042,275 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
+@media (max-width: 75rem) { /* 1200px */
     .panels-container {
         flex-direction: column;
-        gap: 1.5rem;
+        gap: clamp(1rem, 2.5vh, 1.5rem);
         align-items: center;
     }
     
     .info-panel {
         width: 100%;
-        max-width: min(80vw, 304px); /* %20 küçültülmüş */
-        height: min(40vh, 240px); /* 300px * 0.8 = 240px */
+        max-width: min(80vw, 20.9rem); /* %10 büyütülmüş: 19rem*1.1=20.9rem */
+        height: min(40vh, 15rem);
     }
     
     .chat-container {
         width: 100%;
-        max-width: min(90vw, 600px); /* %20 küçültülmüş */
-        height: min(70vh, 520px); /* 650px * 0.8 = 520px */
+        max-width: min(90vw, 37.5rem);
+        height: min(70vh, 32.5rem);
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) { /* 768px - Tablet ve Mobil */
     .app-container {
-        padding: 1rem;
+        padding: clamp(0.5rem, 1.5vw, 0.75rem);
+        min-height: 100vh;
     }
     
     .panels-container {
         flex-direction: column;
-        gap: 1rem;
-        align-items: center;
+        gap: clamp(1rem, 3vh, 1.5rem);
+        align-items: stretch;
+        width: 100%;
+        max-width: 100%;
+        margin-top: clamp(0.5rem, 2vh, 1rem);
     }
     
     .info-panel {
-        width: 100%;
-        height: min(30vh, 200px); /* 250px * 0.8 = 200px */
-        max-width: 100%;
+        width: 100% !important;
+        height: auto !important;
+        min-height: clamp(20rem, 40vh, 25rem);
+        max-width: 100% !important;
+        max-height: none !important;
     }
     
     .chat-container {
-        width: 100%;
-        height: min(calc(100vh - 400px), 480px); /* %20 küçültülmüş */
-        max-width: 100%;
+        width: 100% !important;
+        height: auto !important;
+        min-height: clamp(25rem, 50vh, 35rem);
+        max-width: 100% !important;
+        max-height: none !important;
     }
     
     .chat-sidebar {
-        width: 280px;
+        width: min(17.5rem, 85vw);
+        max-width: 17.5rem;
     }
     
     .main-logo {
-        height: min(9.6vh, 8vw); /* %20 küçültülmüş: 12vh*0.8, 10vw*0.8 */
-        max-height: 80px; /* 100px * 0.8 = 80px */
-        margin: 0.5rem auto 0.75rem; /* Üstten daha az boşluk */
+        height: clamp(6vh, 8vw, 10vh);
+        max-height: clamp(4rem, 10vw, 6rem);
+        margin: clamp(0.25rem, 1vh, 0.5rem) auto clamp(0.5rem, 1.5vh, 0.75rem);
     }
     
     .theme-btn-top {
-        top: 1rem;
-        right: 1.5rem;
-        padding: 0.5rem;
-    }
-    
-    .panels-container {
-        margin-top: 1rem;
+        top: clamp(0.5rem, 1.5vh, 0.75rem);
+        right: clamp(0.5rem, 2vw, 1rem);
+        padding: clamp(0.5rem, 1.2vw, 0.625rem);
     }
     
     .sidebar-toggle {
-        top: 1rem;
-        left: 0.5rem;
+        top: clamp(0.5rem, 1.5vh, 0.75rem);
+        left: clamp(0.5rem, 1.5vw, 0.75rem);
+        width: clamp(2.5rem, 6vw, 3rem);
+        height: clamp(2.5rem, 6vw, 3rem);
+    }
+    
+    .panel-header {
+        padding: clamp(0.8rem, 2vh, 1rem) clamp(0.8rem, 2vw, 1.2rem) !important; /* %20 küçültülmüş */
+    }
+    
+    .panel-header h3 {
+        font-size: clamp(1.125rem, 3vw, 1.375rem) !important;
+    }
+    
+    .panel-content {
+        padding: clamp(1rem, 2.5vw, 1.5rem) !important;
+        min-height: auto;
     }
     
     .chat-messages {
-        padding: 1.5rem;
+        padding: clamp(1rem, 2.5vh, 1.5rem) !important;
+        min-height: clamp(15rem, 30vh, 20rem);
     }
     
     .chat-input-container {
-        padding: 1.25rem;
+        padding: clamp(0.8rem, 2vh, 1rem) clamp(0.8rem, 2vw, 1.2rem) !important; /* %20 küçültülmüş */
+    }
+    
+    .message {
+        max-width: 85%;
+    }
+    
+    .message-bubble {
+        font-size: clamp(0.95rem, 2.2vw, 1.05rem) !important;
+        padding: clamp(0.875rem, 2vw, 1rem) clamp(1rem, 2.5vw, 1.25rem) !important;
+    }
+    
+    #messageInput {
+        font-size: clamp(0.95rem, 2.2vw, 1.05rem) !important;
+        padding: clamp(0.875rem, 2vw, 1rem) clamp(1rem, 2.5vw, 1.5rem) !important;
+    }
+    
+    .send-btn {
+        width: clamp(2.75rem, 6.5vw, 3.125rem) !important;
+        height: clamp(2.75rem, 6.5vw, 3.125rem) !important;
+    }
+    
+    .weather-temp {
+        font-size: clamp(2.25rem, 6vw, 2.75rem) !important;
+    }
+    
+    .weather-icon-large {
+        font-size: clamp(3.5rem, 9vw, 4.5rem) !important;
+    }
+    
+    .soil-chart-canvas {
+        height: clamp(10rem, 20vh, 12rem) !important;
+    }
+    
+    .panel-btn {
+        padding: clamp(0.875rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem) !important;
+        font-size: clamp(0.95rem, 2.2vw, 1.05rem) !important;
+    }
+}
+
+@media (max-width: 30rem) { /* 480px - Küçük Telefonlar */
+    .app-container {
+        padding: clamp(0.5rem, 2vw, 0.75rem);
+        min-height: 100vh;
+    }
+    
+    .panels-container {
+        gap: clamp(1rem, 3vh, 1.25rem);
+        align-items: stretch;
+        width: 100%;
+        max-width: 100%;
+        margin-top: clamp(0.5rem, 2vh, 0.75rem);
+    }
+    
+    .info-panel {
+        width: 100% !important;
+        height: auto !important;
+        min-height: clamp(18rem, 35vh, 22rem);
+        max-width: 100% !important;
+        max-height: none !important;
+    }
+    
+    .chat-container {
+        width: 100% !important;
+        height: auto !important;
+        min-height: clamp(22rem, 45vh, 30rem);
+        max-width: 100% !important;
+        max-height: none !important;
+        border-radius: var(--radius-md);
+    }
+    
+    .chat-sidebar {
+        width: 100% !important;
+        max-width: 100%;
+        left: -100%;
+    }
+    
+    .main-logo {
+        height: clamp(5vh, 7vw, 8vh);
+        max-height: clamp(3rem, 8vw, 4.5rem);
+        margin: clamp(0.25rem, 1vh, 0.5rem) auto clamp(0.5rem, 1.5vh, 0.75rem);
+    }
+    
+    .theme-btn-top {
+        top: clamp(0.5rem, 1.5vh, 0.75rem);
+        right: clamp(0.5rem, 2vw, 0.75rem);
+        padding: clamp(0.5rem, 1.2vw, 0.625rem);
+    }
+    
+    .sidebar-toggle {
+        top: clamp(0.5rem, 1.5vh, 0.75rem);
+        left: clamp(0.5rem, 1.5vw, 0.75rem);
+        width: clamp(2.5rem, 6.5vw, 3rem);
+        height: clamp(2.5rem, 6.5vw, 3rem);
+    }
+    
+    .panel-header {
+        padding: clamp(0.7rem, 1.6vh, 0.8rem) clamp(0.7rem, 1.6vw, 1rem) !important; /* %20 küçültülmüş */
+    }
+    
+    .panel-header h3 {
+        font-size: clamp(1rem, 2.8vw, 1.25rem) !important;
+    }
+    
+    .panel-content {
+        padding: clamp(0.875rem, 2vw, 1.25rem) !important;
+    }
+    
+    .chat-messages {
+        padding: clamp(0.875rem, 2vh, 1.25rem) !important;
+        min-height: clamp(12rem, 25vh, 16rem);
+    }
+    
+    .chat-input-container {
+        padding: clamp(0.7rem, 1.6vh, 0.8rem) clamp(0.7rem, 1.6vw, 1rem) !important; /* %20 küçültülmüş */
     }
     
     .message {
         max-width: 90%;
     }
     
-    .chat-title h1 {
-        font-size: 1.5rem;
+    .message-bubble {
+        font-size: clamp(0.9rem, 2vw, 1rem) !important;
+        padding: clamp(0.75rem, 1.8vw, 0.875rem) clamp(0.875rem, 2vw, 1rem) !important;
     }
     
-    .panel-header h3 {
-        font-size: 1.25rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .app-container {
-        padding: 0.5rem;
+    #messageInput {
+        font-size: clamp(0.9rem, 2vw, 1rem) !important;
+        padding: clamp(0.75rem, 1.8vw, 0.875rem) clamp(0.875rem, 2vw, 1.25rem) !important;
     }
     
-    .panels-container {
-        gap: 0.75rem;
-        align-items: center;
+    .send-btn {
+        width: clamp(2.5rem, 6vw, 2.875rem) !important;
+        height: clamp(2.5rem, 6vw, 2.875rem) !important;
     }
     
-    .info-panel {
-        width: 100%;
-        height: min(25vh, 160px); /* 200px * 0.8 = 160px */
+    .weather-temp {
+        font-size: clamp(2rem, 5.5vw, 2.5rem) !important;
     }
     
-    .chat-container {
-        width: 100%;
-        height: min(calc(100vh - 350px), 400px); /* %20 küçültülmüş */
-        border-radius: var(--radius-md);
+    .weather-icon-large {
+        font-size: clamp(3rem, 8vw, 4rem) !important;
     }
     
-    .chat-sidebar {
-        width: 100%;
-        left: -100%;
+    .weather-desc {
+        font-size: clamp(0.9rem, 2vw, 1rem) !important;
     }
     
-    .main-logo {
-        height: min(8vh, 6.4vw); /* %20 küçültülmüş: 10vh*0.8, 8vw*0.8 */
-        max-height: 64px; /* 80px * 0.8 = 64px */
-        margin: 0.5rem auto 0.5rem; /* Üstten daha az boşluk */
-    }
-    
-    .theme-btn-top {
-        top: 0.75rem;
-        right: 1rem;
-        padding: 0.5rem;
-    }
-    
-    .panels-container {
-        margin-top: 0.5rem;
-    }
-    
-    .sidebar-toggle {
-        top: 0.5rem;
-        left: 0.5rem;
-        width: 40px;
-        height: 40px;
-    }
-    
-    .panel-header h3 {
-        font-size: 1.1rem;
-    }
-    
-    .placeholder-icon {
-        font-size: 3.5rem;
-    }
-    
-    .panel-placeholder p {
-        font-size: 1rem;
+    .soil-chart-canvas {
+        height: clamp(8rem, 18vh, 10rem) !important;
     }
     
     .panel-btn {
-        padding: 0.75rem 1.5rem;
-        font-size: 0.95rem;
+        padding: clamp(0.75rem, 1.8vw, 0.875rem) clamp(1.25rem, 3.5vw, 1.75rem) !important;
+        font-size: clamp(0.9rem, 2vw, 1rem) !important;
     }
     
-    .chat-title h1 {
-        font-size: 1.3rem;
+    .placeholder-icon {
+        font-size: clamp(2.5rem, 7vw, 3.5rem);
+    }
+    
+    .panel-placeholder p {
+        font-size: clamp(0.9rem, 2vw, 1rem);
     }
     
     .welcome-message h3 {
-        font-size: 1.5rem;
+        font-size: clamp(1.125rem, 3vw, 1.375rem);
     }
     
     .welcome-message p {
-        font-size: 1rem;
+        font-size: clamp(0.9rem, 2vw, 1rem);
+    }
+    
+    .example-question-btn {
+        font-size: clamp(0.9rem, 2vw, 1rem) !important;
+        padding: clamp(0.75rem, 1.8vw, 0.875rem) clamp(1rem, 2.5vw, 1.25rem) !important;
     }
 }
