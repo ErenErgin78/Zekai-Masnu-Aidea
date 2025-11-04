@@ -154,7 +154,7 @@ http://localhost:8001
 
 ## 🔧 Proje Yapısı
 
-```
+```text
 Zekai-Masnu-Aidea/
 ├── Backend/
 │   ├── API/           # FastAPI servisleri
