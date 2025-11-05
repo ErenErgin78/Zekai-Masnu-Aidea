@@ -19,11 +19,24 @@ from sklearn.multioutput import MultiOutputClassifier
 import warnings
 warnings.filterwarnings('ignore')
 
+# Görselleştirme için opsiyonel importlar (kurulu değilse script çalışmaya devam eder)
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    HAS_PLOTTING = True
+except Exception:
+    HAS_PLOTTING = False
+
 # Model dosyalarının yolu
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "Backend", "API", "MachineLearning", "Code", "model_outputs")
 
 def train_multi_label_models(X, y_multi_label, crop_names):
-    """Multi-label modelleri eğitir - Binary Relevance ile"""
+    """Multi-label modelleri eğitir - Binary Relevance ile
+
+    Bu fonksiyon eğitim/test ayrımı, ölçekleme, model taraması ve
+    GridSearch sonuçlarının özetini üretir. Üretilen ara bilgileri
+    ayrıntılı rapora eklemek üzere döndürür.
+    """
     print("🔄 Multi-label model eğitimi başlıyor...")
     
     try:
@@ -124,6 +137,16 @@ def train_multi_label_models(X, y_multi_label, crop_names):
         best_score = 0
         best_name = ""
         results = {}
+        # Eğitim/ölçekleme ve arama meta bilgileri rapora eklenecek
+        training_info = {
+            'train_size': int(X_train.shape[0]),
+            'test_size': int(X_test.shape[0]),
+            'num_features': int(X.shape[1]),
+            'num_labels': int(y_multi_label.shape[1]),
+            'scaler_means_head': [float(m) for m in (getattr(scaler, 'mean_', [])[:10] if hasattr(scaler, 'mean_') else [])],
+            'scaler_scales_head': [float(s) for s in (getattr(scaler, 'scale_', [])[:10] if hasattr(scaler, 'scale_') else [])],
+            'grid_search_summaries': {}
+        }
         
         print(f"🔄 {len(models_and_params)} farklı algoritma test edilecek...")
         
@@ -176,6 +199,22 @@ def train_multi_label_models(X, y_multi_label, crop_names):
                 hamming = hamming_loss(y_test, y_pred)
                 jaccard = jaccard_score(y_test, y_pred, average='macro', zero_division=0)
                 
+                # GridSearch özetini derle (ilk 5 sonuç)
+                cv_summary = []
+                try:
+                    cv_results = grid_search.cv_results_
+                    means = cv_results.get('mean_test_score', [])
+                    params_list = cv_results.get('params', [])
+                    # En iyi 5 konfigürasyonu sırala
+                    top_idx = np.argsort(means)[::-1][:5]
+                    for idx in top_idx:
+                        cv_summary.append({
+                            'mean_test_score': float(means[idx]),
+                            'params': params_list[idx]
+                        })
+                except Exception:
+                    cv_summary = []
+
                 results[name] = {
                     'accuracy': accuracy,
                     'f1_micro': f1_micro,
@@ -184,7 +223,13 @@ def train_multi_label_models(X, y_multi_label, crop_names):
                     'jaccard_score': jaccard,
                     'best_params': grid_search.best_params_,
                     'model': best_model_cv,
-                    'predictions': y_pred
+                    'predictions': y_pred,
+                    'cv_top': cv_summary
+                }
+                # Modelin grid arama özetini ekle
+                training_info['grid_search_summaries'][name] = {
+                    'best_params': grid_search.best_params_,
+                    'cv_top': cv_summary
                 }
                 
                 print(f"✅ {name}:")
@@ -234,10 +279,22 @@ def train_multi_label_models(X, y_multi_label, crop_names):
             'metadata': metadata
         }
         
+        # 1) Mevcut dizine kaydet
         joblib.dump(complete_model, model_save_path)
         print(f"✅ En iyi model kaydedildi: {model_save_path}")
+
+        # 2) Model klasörüne 'model2.pkl' adıyla da kaydet
+        try:
+            model_dir = os.path.join(os.path.dirname(__file__), "..", "Model")
+            model_dir = os.path.normpath(model_dir)
+            os.makedirs(model_dir, exist_ok=True)  # Klasör yoksa oluştur
+            model2_path = os.path.join(model_dir, "model2.pkl")
+            joblib.dump(complete_model, model2_path)
+            print(f"✅ En iyi model Model klasörüne de kaydedildi: {model2_path}")
+        except Exception as save_err:
+            print(f"⚠️ Model klasörüne kaydedilirken hata: {save_err}")
         
-        return best_model, scaler, metadata, results, X_test, y_test
+        return best_model, scaler, metadata, results, X_test, y_test, training_info
         
     except Exception as e:
         print(f"❌ Model eğitimi hatası: {e}")
@@ -246,7 +303,11 @@ def train_multi_label_models(X, y_multi_label, crop_names):
         return None, None, None, None, None, None
 
 def prepare_multi_label_data(df):
-    """Multi-label veriyi hazırlar"""
+    """Multi-label veriyi hazırlar
+
+    Veri hazırlama sırasında gerçekleştirilen tüm adımların özetini de
+    döndürür; böylece raporda ayrıntılı şekilde sunulabilir.
+    """
     print("🔄 Multi-label veri hazırlama başlıyor...")
     
     # Label sütunlarını ayır
@@ -262,6 +323,20 @@ def prepare_multi_label_data(df):
     
     # Crop isimlerini çıkar
     crop_names = [col.replace('label_', '') for col in label_columns]
+
+    # Veri hazırlama bilgilerini toplamak için sözlük
+    prep_info = {
+        'num_rows': int(df.shape[0]),
+        'num_cols': int(df.shape[1]),
+        'num_features': int(len(feature_columns)),
+        'num_labels': int(len(label_columns)),
+        'feature_columns_head': feature_columns[:20],
+        'label_columns': label_columns,
+        'removed_single_class_labels': [],
+        'categorical_columns': [],
+        'missing_summary': {},
+        'infinite_detected': False
+    }
     
     print(f"📊 Özellik sayısı: {X.shape[1]}")
     print(f"📊 Örnek sayısı: {X.shape[0]}")
@@ -286,6 +361,7 @@ def prepare_multi_label_data(df):
         
         y_multi_label = y_multi_label.iloc[:, valid_labels]
         crop_names = [crop for crop in crop_names if crop not in single_class_labels]
+        prep_info['removed_single_class_labels'] = single_class_labels
         
         print(f"✅ Geçerli ürün sayısı: {len(crop_names)}")
     else:
@@ -295,6 +371,7 @@ def prepare_multi_label_data(df):
     categorical_columns = X.select_dtypes(include=['object']).columns
     if len(categorical_columns) > 0:
         print(f"🔄 Kategorik sütunlar işleniyor: {list(categorical_columns)}")
+        prep_info['categorical_columns'] = [str(c) for c in list(categorical_columns)]
         for col in categorical_columns:
             le = LabelEncoder()
             X[col] = le.fit_transform(X[col].astype(str))
@@ -310,6 +387,10 @@ def prepare_multi_label_data(df):
     missing_values = X.isnull().sum()
     if missing_values.sum() > 0:
         print("⚠️ Eksik değerler bulundu, ortalama ile dolduruluyor...")
+        # Eksik değer özetini (ilk 20 sütun için) kaydet
+        prep_info['missing_summary'] = {
+            str(col): int(missing_values[col]) for col in missing_values[missing_values > 0].sort_values(ascending=False).head(20).index
+        }
         X = X.fillna(X.mean())
     else:
         print("✅ Eksik değer yok")
@@ -320,11 +401,17 @@ def prepare_multi_label_data(df):
         print("⚠️ Sonsuz değerler bulundu, NaN ile değiştiriliyor...")
         X = X.replace([np.inf, -np.inf], np.nan)
         X = X.fillna(X.mean())
+        prep_info['infinite_detected'] = True
     
-    return X, y_multi_label, crop_names
+    return X, y_multi_label, crop_names, prep_info
 
-def generate_multi_label_report(results, crop_names, X_test, y_test):
-    """Multi-label analiz raporu oluşturur"""
+def generate_multi_label_report(results, crop_names, X_test, y_test, prep_info, training_info, metadata):
+    """Multi-label analiz raporu oluşturur
+
+    Rapor; veri önişleme adımlarını, eğitim/validasyon ayrıntılarını,
+    GridSearch özetlerini, model karşılaştırmasını ve ürün bazlı
+    metrikleri ayrıntılı şekilde içerir.
+    """
     print("\n📝 Multi-label raporu oluşturuluyor...")
     
     report_lines = []
@@ -333,6 +420,47 @@ def generate_multi_label_report(results, crop_names, X_test, y_test):
     report_lines.append("=" * 80)
     report_lines.append(f"Rapor Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     report_lines.append(f"Toplam Ürün Sayısı: {len(crop_names)}")
+    report_lines.append("")
+
+    # Veri Hazırlama Özeti
+    report_lines.append("VERİ HAZIRLAMA ÖZETİ")
+    report_lines.append("-" * 40)
+    report_lines.append(f"Satır Sayısı: {prep_info.get('num_rows', 0)}")
+    report_lines.append(f"Sütun Sayısı: {prep_info.get('num_cols', 0)}")
+    report_lines.append(f"Özellik Sütunu Sayısı: {prep_info.get('num_features', 0)}")
+    report_lines.append(f"Label Sütunu Sayısı: {prep_info.get('num_labels', 0)}")
+    if prep_info.get('feature_columns_head'):
+        report_lines.append("Özellik Sütunları (ilk 20):")
+        for c in prep_info['feature_columns_head']:
+            report_lines.append(f"  - {c}")
+    if prep_info.get('categorical_columns'):
+        report_lines.append("Kategorik Sütunlar:")
+        for c in prep_info['categorical_columns']:
+            report_lines.append(f"  - {c}")
+    if prep_info.get('removed_single_class_labels'):
+        report_lines.append("Analizden Çıkarılan Tek Sınıflı Ürünler:")
+        for c in prep_info['removed_single_class_labels']:
+            report_lines.append(f"  - {c}")
+    if prep_info.get('missing_summary'):
+        report_lines.append("Eksik Değer Özeti (ilk 20 sütun):")
+        for col, cnt in prep_info['missing_summary'].items():
+            report_lines.append(f"  - {col}: {cnt}")
+    report_lines.append(f"Sonsuz Değer Tespit Edildi mi?: {'Evet' if prep_info.get('infinite_detected') else 'Hayır'}")
+    report_lines.append("")
+
+    # Eğitim/Doğrulama Özeti
+    report_lines.append("EĞİTİM/DOĞRULAMA ÖZETİ")
+    report_lines.append("-" * 40)
+    report_lines.append(f"Eğitim Örnek Sayısı: {training_info.get('train_size')}")
+    report_lines.append(f"Test Örnek Sayısı: {training_info.get('test_size')}")
+    report_lines.append(f"Özellik Sayısı: {training_info.get('num_features')}")
+    report_lines.append(f"Label Sayısı: {training_info.get('num_labels')}")
+    means_head = training_info.get('scaler_means_head') or []
+    scales_head = training_info.get('scaler_scales_head') or []
+    if means_head and scales_head:
+        report_lines.append("StandardScaler İstatistikleri (ilk 10 özellik):")
+        for i, (m, s) in enumerate(zip(means_head, scales_head), 1):
+            report_lines.append(f"  {i:02d}. mean={m:.6f}, scale={s:.6f}")
     report_lines.append("")
     
     # Model karşılaştırması
@@ -349,6 +477,12 @@ def generate_multi_label_report(results, crop_names, X_test, y_test):
         report_lines.append(f"   F1-Macro: {result['f1_macro']:.4f}")
         report_lines.append(f"   Hamming Loss: {result['hamming_loss']:.4f}")
         report_lines.append(f"   Jaccard Score: {result['jaccard_score']:.4f}")
+        if 'best_params' in result and isinstance(result['best_params'], dict):
+            report_lines.append(f"   En İyi Parametreler: {result['best_params']}")
+        if 'cv_top' in result and result['cv_top']:
+            report_lines.append("   GridSearch En İyi 5 Konfigürasyon:")
+            for j, row in enumerate(result['cv_top'], 1):
+                report_lines.append(f"     {j}. mean_test_score={row['mean_test_score']:.6f}, params={row['params']}")
         report_lines.append("")
     
     # Ürün bazlı performans
@@ -379,7 +513,18 @@ def generate_multi_label_report(results, crop_names, X_test, y_test):
             report_lines.append(f"   Recall: {recall:.4f}")
             report_lines.append(f"   F1-Score: {f1:.4f}")
             report_lines.append(f"   True Positives: {true_positives}")
+            report_lines.append(f"   False Positives: {false_positives}")
+            report_lines.append(f"   False Negatives: {false_negatives}")
+            report_lines.append(f"   True Negatives: {true_negatives}")
             report_lines.append("")
+
+    # Genel özet ve meta bilgiler
+    report_lines.append("GENEL ÖZET VE META BİLGİLER")
+    report_lines.append("-" * 40)
+    report_lines.append(f"En İyi Model: {metadata.get('best_model', 'N/A')}")
+    report_lines.append(f"En İyi F1-Macro: {metadata.get('best_f1_macro', 0):.4f}")
+    report_lines.append(f"Eğitim Tarihi: {metadata.get('training_date', 'N/A')}")
+    report_lines.append(f"Ürünler: {', '.join(metadata.get('crop_names', []))}")
     
     report_lines.append("=" * 80)
     report_lines.append("RAPOR SONU")
@@ -388,24 +533,131 @@ def generate_multi_label_report(results, crop_names, X_test, y_test):
     return "\n".join(report_lines)
 
 
+def generate_visualizations(results, crop_names, y_test, output_dir, best_result):
+    """Model ve etiket bazlı performans görsellerini üretir ve kaydeder.
+
+    - Model karşılaştırma grafikleri (F1-Macro, Accuracy)
+    - En iyi model için etiket bazlı Precision/Recall/F1 bar grafiği
+    Grafikler belirtilen klasöre kaydedilir.
+    """
+    if not HAS_PLOTTING:
+        print("⚠️ matplotlib/seaborn bulunamadı; görseller üretilmedi")
+        return
+
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+    except Exception as e:
+        print(f"⚠️ Grafik klasörü oluşturulamadı: {e}")
+        return
+
+    try:
+        # 1) Model karşılaştırma (F1-Macro)
+        successful = {k: v for k, v in results.items() if 'error' not in v}
+        if successful:
+            names = list(successful.keys())
+            f1_macros = [successful[n]['f1_macro'] for n in names]
+            accuracies = [successful[n]['accuracy'] for n in names]
+
+            plt.figure(figsize=(10, 5))
+            sns.barplot(x=names, y=f1_macros, palette='viridis')
+            plt.xticks(rotation=30, ha='right')
+            plt.ylabel('F1-Macro')
+            plt.title('Model Karşılaştırması - F1-Macro')
+            plt.tight_layout()
+            out_path = os.path.join(output_dir, 'model_comparison_f1_macro.png')
+            plt.savefig(out_path, dpi=150)
+            plt.close()
+            print(f"🖼️ Kaydedildi: {out_path}")
+
+            # 2) Model karşılaştırma (Accuracy)
+            plt.figure(figsize=(10, 5))
+            sns.barplot(x=names, y=accuracies, palette='magma')
+            plt.xticks(rotation=30, ha='right')
+            plt.ylabel('Accuracy')
+            plt.title('Model Karşılaştırması - Accuracy')
+            plt.tight_layout()
+            out_path = os.path.join(output_dir, 'model_comparison_accuracy.png')
+            plt.savefig(out_path, dpi=150)
+            plt.close()
+            print(f"🖼️ Kaydedildi: {out_path}")
+
+        # 3) En iyi model için etiket bazlı metrikler
+        if best_result is not None and 'predictions' in best_result:
+            y_pred = best_result['predictions']
+            y_true = np.array(y_test)
+            per_label_f1 = []
+            per_label_prec = []
+            per_label_rec = []
+
+            for i in range(min(len(crop_names), y_true.shape[1])):
+                tp = np.sum((y_true[:, i] == 1) & (y_pred[:, i] == 1))
+                fp = np.sum((y_true[:, i] == 0) & (y_pred[:, i] == 1))
+                fn = np.sum((y_true[:, i] == 1) & (y_pred[:, i] == 0))
+                precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+                recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+                per_label_prec.append(precision)
+                per_label_rec.append(recall)
+                per_label_f1.append(f1)
+
+            # Çok kalabalık olmaması için ilk 20 etiketi çizelim
+            top_k = min(20, len(crop_names))
+            labels_plot = crop_names[:top_k]
+            f1_plot = per_label_f1[:top_k]
+            prec_plot = per_label_prec[:top_k]
+            rec_plot = per_label_rec[:top_k]
+
+            # F1 bar
+            plt.figure(figsize=(12, 6))
+            sns.barplot(x=labels_plot, y=f1_plot, palette='crest')
+            plt.xticks(rotation=45, ha='right')
+            plt.ylabel('F1-Score')
+            plt.title('Etiket Bazlı F1-Score (En İyi Model)')
+            plt.tight_layout()
+            out_path = os.path.join(output_dir, 'per_label_f1_top20.png')
+            plt.savefig(out_path, dpi=150)
+            plt.close()
+            print(f"🖼️ Kaydedildi: {out_path}")
+
+            # Precision/Recall yan yana
+            plt.figure(figsize=(12, 6))
+            x = np.arange(len(labels_plot))
+            width = 0.4
+            plt.bar(x - width/2, prec_plot, width=width, label='Precision')
+            plt.bar(x + width/2, rec_plot, width=width, label='Recall')
+            plt.xticks(x, labels_plot, rotation=45, ha='right')
+            plt.ylim(0, 1.0)
+            plt.ylabel('Skor')
+            plt.title('Etiket Bazlı Precision/Recall (En İyi Model)')
+            plt.legend()
+            plt.tight_layout()
+            out_path = os.path.join(output_dir, 'per_label_precision_recall_top20.png')
+            plt.savefig(out_path, dpi=150)
+            plt.close()
+            print(f"🖼️ Kaydedildi: {out_path}")
+    except Exception as e:
+        print(f"⚠️ Görsel üretimi sırasında hata: {e}")
+
+
 def main():
     """Ana fonksiyon"""
     print("🚀 Multi-Label Makine Öğrenmesi Analizi Başlıyor...")
     print("=" * 60)
     
     try:
-        # CSV dosyasını yükle
-        csv_path = os.path.join(os.path.dirname(__file__), "final5.csv")
+        # CSV dosyasını Data klasöründen yükle
+        csv_path = os.path.join(os.path.dirname(__file__), "..", "Data", "final5.csv")
+        csv_path = os.path.normpath(csv_path)  # Windows path'leri için normalize et
         print(f"📁 CSV dosyası yükleniyor: {csv_path}")
         
         df = pd.read_csv(csv_path)
         print(f"✅ CSV yüklendi: {df.shape[0]} satır, {df.shape[1]} sütun")
         
         # Multi-label veriyi hazırla
-        X, y_multi_label, crop_names = prepare_multi_label_data(df)
+        X, y_multi_label, crop_names, prep_info = prepare_multi_label_data(df)
         
         # Multi-label modelleri eğit
-        best_model, scaler, metadata, results, X_test, y_test = train_multi_label_models(
+        best_model, scaler, metadata, results, X_test, y_test, training_info = train_multi_label_models(
             X, y_multi_label, crop_names
         )
         
@@ -414,10 +666,19 @@ def main():
             return
         
         # Rapor oluştur
-        report_content = generate_multi_label_report(results, crop_names, X_test, y_test)
+        report_content = generate_multi_label_report(
+            results,
+            crop_names,
+            X_test,
+            y_test,
+            prep_info,
+            training_info,
+            metadata
+        )
         
-        # Raporu dosyaya yaz
-        report_path = os.path.join(os.path.dirname(__file__), "multi_label_report.txt")
+        # Raporu Data klasörüne final_report.txt olarak kaydet
+        report_path = os.path.join(os.path.dirname(__file__), "..", "Data", "final_report.txt")
+        report_path = os.path.normpath(report_path)  # Windows path'leri için normalize et
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report_content)
         
@@ -431,6 +692,18 @@ def main():
         print(f"En İyi Model: {metadata['best_model']}")
         print(f"En İyi F1-Macro: {metadata['best_f1_macro']:.4f}")
         
+        # Görseller: 'Grafikler' klasörüne yaz
+        try:
+            best_model_name = metadata.get('best_model')
+            best_result = None
+            if best_model_name and best_model_name in results:
+                best_result = results[best_model_name]
+            graphs_dir = os.path.join(os.path.dirname(__file__), "..", "Grafikler")
+            graphs_dir = os.path.normpath(graphs_dir)
+            generate_visualizations(results, crop_names, y_test, graphs_dir, best_result)
+        except Exception as viz_err:
+            print(f"⚠️ Görseller üretilirken hata: {viz_err}")
+
         print("\n🎉 Multi-label analiz tamamlandı!")
         
     except Exception as e:

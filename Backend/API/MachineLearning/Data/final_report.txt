@@ -1,0 +1,522 @@
+================================================================================
+BINARY RELEVANCE MULTI-LABEL CLASSIFICATION RAPORU
+================================================================================
+Rapor Tarihi: 2025-11-05 17:29:26
+Toplam Ürün Sayısı: 38
+
+VERİ HAZIRLAMA ÖZETİ
+----------------------------------------
+Satır Sayısı: 1564
+Sütun Sayısı: 75
+Özellik Sütunu Sayısı: 36
+Label Sütunu Sayısı: 39
+Özellik Sütunları (ilk 20):
+  - wrb4_code
+  - physical_available_water_capacity
+  - basic_organic_carbon
+  - basic_c/n_ratio
+  - texture_clay
+  - texture_sand
+  - texture_coarse_fragments
+  - physical_reference_bulk_density
+  - chemical_cation_exchange_capacity
+  - chemical_clay_cec
+  - chemical_total_exchangeable_bases
+  - chemical_base_saturation
+  - chemical_exchangeable_sodium_percentage
+  - chemical_aluminum_saturation
+  - salinity_electrical_conductivity
+  - salinity_total_carbon_equivalent
+  - salinity_gypsum_content
+  - Ortalama En Yüksek Sıcaklık (°C)_Eylül
+  - Ortalama En Yüksek Sıcaklık (°C)_Aralık
+  - Ortalama En Düşük Sıcaklık (°C)_Ağustos
+Analizden Çıkarılan Tek Sınıflı Ürünler:
+  - Meyve
+Sonsuz Değer Tespit Edildi mi?: Hayır
+
+EĞİTİM/DOĞRULAMA ÖZETİ
+----------------------------------------
+Eğitim Örnek Sayısı: 1251
+Test Örnek Sayısı: 313
+Özellik Sayısı: 36
+Label Sayısı: 38
+StandardScaler İstatistikleri (ilk 10 özellik):
+  01. mean=10.303757, scale=5.209179
+  02. mean=109.115907, scale=67.715728
+  03. mean=1.748452, scale=0.858406
+  04. mean=10.263989, scale=3.194955
+  05. mean=23.684253, scale=9.053190
+  06. mean=38.040767, scale=11.707087
+  07. mean=10.865707, scale=8.080502
+  08. mean=1.768265, scale=0.086905
+  09. mean=17.376659, scale=6.485316
+  10. mean=49.875600, scale=17.023328
+
+MODEL KARŞILAŞTIRMASI
+----------------------------------------
+1. RandomForest
+   Accuracy: 0.9712
+   F1-Micro: 0.9835
+   F1-Macro: 0.9487
+   Hamming Loss: 0.0026
+   Jaccard Score: 0.9310
+   En İyi Parametreler: {'estimator__max_depth': None, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 50}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.938885, params={'estimator__max_depth': 20, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 50}
+     2. mean_test_score=0.938885, params={'estimator__max_depth': None, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 50}
+     3. mean_test_score=0.938866, params={'estimator__max_depth': 10, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 50}
+     4. mean_test_score=0.937995, params={'estimator__max_depth': 20, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 100}
+     5. mean_test_score=0.937995, params={'estimator__max_depth': None, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 100}
+
+2. XGBoost
+   Accuracy: 0.9681
+   F1-Micro: 0.9835
+   F1-Macro: 0.9486
+   Hamming Loss: 0.0026
+   Jaccard Score: 0.9308
+   En İyi Parametreler: {'estimator__learning_rate': 0.2, 'estimator__max_depth': 3, 'estimator__n_estimators': 100}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.922393, params={'estimator__learning_rate': 0.2, 'estimator__max_depth': 3, 'estimator__n_estimators': 100}
+     2. mean_test_score=0.921962, params={'estimator__learning_rate': 0.2, 'estimator__max_depth': 6, 'estimator__n_estimators': 100}
+     3. mean_test_score=0.921144, params={'estimator__learning_rate': 0.2, 'estimator__max_depth': 3, 'estimator__n_estimators': 50}
+     4. mean_test_score=0.921105, params={'estimator__learning_rate': 0.2, 'estimator__max_depth': 6, 'estimator__n_estimators': 50}
+     5. mean_test_score=0.919975, params={'estimator__learning_rate': 0.1, 'estimator__max_depth': 6, 'estimator__n_estimators': 100}
+
+3. DecisionTree
+   Accuracy: 0.9649
+   F1-Micro: 0.9824
+   F1-Macro: 0.9479
+   Hamming Loss: 0.0028
+   Jaccard Score: 0.9296
+   En İyi Parametreler: {'estimator__max_depth': None, 'estimator__min_samples_leaf': 1, 'estimator__min_samples_split': 2}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.934278, params={'estimator__max_depth': 20, 'estimator__min_samples_leaf': 1, 'estimator__min_samples_split': 2}
+     2. mean_test_score=0.934278, params={'estimator__max_depth': 10, 'estimator__min_samples_leaf': 1, 'estimator__min_samples_split': 2}
+     3. mean_test_score=0.934278, params={'estimator__max_depth': None, 'estimator__min_samples_leaf': 1, 'estimator__min_samples_split': 2}
+     4. mean_test_score=0.934043, params={'estimator__max_depth': 20, 'estimator__min_samples_leaf': 1, 'estimator__min_samples_split': 5}
+     5. mean_test_score=0.934043, params={'estimator__max_depth': 10, 'estimator__min_samples_leaf': 1, 'estimator__min_samples_split': 5}
+
+4. GradientBoosting
+   Accuracy: 0.9681
+   F1-Micro: 0.9824
+   F1-Macro: 0.9439
+   Hamming Loss: 0.0028
+   Jaccard Score: 0.9259
+   En İyi Parametreler: {'estimator__learning_rate': 0.1, 'estimator__max_depth': 5, 'estimator__n_estimators': 50}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.937497, params={'estimator__learning_rate': 0.1, 'estimator__max_depth': 5, 'estimator__n_estimators': 50}
+     2. mean_test_score=0.936782, params={'estimator__learning_rate': 0.1, 'estimator__max_depth': 5, 'estimator__n_estimators': 100}
+     3. mean_test_score=0.936155, params={'estimator__learning_rate': 0.1, 'estimator__max_depth': 3, 'estimator__n_estimators': 100}
+     4. mean_test_score=0.934722, params={'estimator__learning_rate': 0.1, 'estimator__max_depth': 3, 'estimator__n_estimators': 50}
+     5. mean_test_score=0.909987, params={'estimator__learning_rate': 0.2, 'estimator__max_depth': 3, 'estimator__n_estimators': 100}
+
+5. ExtraTrees
+   Accuracy: 0.9649
+   F1-Micro: 0.9808
+   F1-Macro: 0.9428
+   Hamming Loss: 0.0030
+   Jaccard Score: 0.9203
+   En İyi Parametreler: {'estimator__max_depth': None, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 100}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.913348, params={'estimator__max_depth': 20, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 100}
+     2. mean_test_score=0.913348, params={'estimator__max_depth': None, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 100}
+     3. mean_test_score=0.913223, params={'estimator__max_depth': 10, 'estimator__min_samples_split': 2, 'estimator__n_estimators': 100}
+     4. mean_test_score=0.912530, params={'estimator__max_depth': 20, 'estimator__min_samples_split': 5, 'estimator__n_estimators': 100}
+     5. mean_test_score=0.912530, params={'estimator__max_depth': None, 'estimator__min_samples_split': 5, 'estimator__n_estimators': 100}
+
+6. SVM
+   Accuracy: 0.9489
+   F1-Micro: 0.9776
+   F1-Macro: 0.9380
+   Hamming Loss: 0.0035
+   Jaccard Score: 0.9153
+   En İyi Parametreler: {'estimator__C': 10, 'estimator__gamma': 'scale', 'estimator__kernel': 'rbf'}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.909927, params={'estimator__C': 10, 'estimator__gamma': 'scale', 'estimator__kernel': 'rbf'}
+     2. mean_test_score=0.909911, params={'estimator__C': 10, 'estimator__gamma': 'auto', 'estimator__kernel': 'rbf'}
+     3. mean_test_score=0.855564, params={'estimator__C': 10, 'estimator__gamma': 'auto', 'estimator__kernel': 'poly'}
+     4. mean_test_score=0.855564, params={'estimator__C': 10, 'estimator__gamma': 'scale', 'estimator__kernel': 'poly'}
+     5. mean_test_score=0.742132, params={'estimator__C': 1, 'estimator__gamma': 'auto', 'estimator__kernel': 'rbf'}
+
+7. LogisticRegression
+   Accuracy: 0.8019
+   F1-Micro: 0.9420
+   F1-Macro: 0.9286
+   Hamming Loss: 0.0092
+   Jaccard Score: 0.8950
+   En İyi Parametreler: {'estimator__C': 10, 'estimator__penalty': 'l1', 'estimator__solver': 'liblinear'}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.900108, params={'estimator__C': 10, 'estimator__penalty': 'l1', 'estimator__solver': 'liblinear'}
+     2. mean_test_score=0.877255, params={'estimator__C': 10, 'estimator__penalty': 'l1', 'estimator__solver': 'saga'}
+     3. mean_test_score=0.875118, params={'estimator__C': 10, 'estimator__penalty': 'l2', 'estimator__solver': 'liblinear'}
+     4. mean_test_score=0.870454, params={'estimator__C': 10, 'estimator__penalty': 'l2', 'estimator__solver': 'saga'}
+     5. mean_test_score=0.830203, params={'estimator__C': 1, 'estimator__penalty': 'l1', 'estimator__solver': 'saga'}
+
+8. KNN
+   Accuracy: 0.9489
+   F1-Micro: 0.9643
+   F1-Macro: 0.8969
+   Hamming Loss: 0.0056
+   Jaccard Score: 0.8571
+   En İyi Parametreler: {'estimator__metric': 'manhattan', 'estimator__n_neighbors': 5, 'estimator__weights': 'distance'}
+   GridSearch En İyi 5 Konfigürasyon:
+     1. mean_test_score=0.908508, params={'estimator__metric': 'manhattan', 'estimator__n_neighbors': 5, 'estimator__weights': 'distance'}
+     2. mean_test_score=0.906445, params={'estimator__metric': 'manhattan', 'estimator__n_neighbors': 7, 'estimator__weights': 'distance'}
+     3. mean_test_score=0.902807, params={'estimator__metric': 'euclidean', 'estimator__n_neighbors': 7, 'estimator__weights': 'distance'}
+     4. mean_test_score=0.901112, params={'estimator__metric': 'euclidean', 'estimator__n_neighbors': 5, 'estimator__weights': 'distance'}
+     5. mean_test_score=0.896225, params={'estimator__metric': 'manhattan', 'estimator__n_neighbors': 3, 'estimator__weights': 'distance'}
+
+ÜRÜN BAZLI PERFORMANS
+----------------------------------------
+Arpa:
+   Precision: 0.9732
+   Recall: 0.9909
+   F1-Score: 0.9820
+   True Positives: 109
+   False Positives: 3
+   False Negatives: 1
+   True Negatives: 200
+
+Ayçiçeği:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 300
+
+Badem:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 5
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 308
+
+Biber:
+   Precision: 1.0000
+   Recall: 0.9259
+   F1-Score: 0.9615
+   True Positives: 25
+   False Positives: 0
+   False Negatives: 2
+   True Negatives: 286
+
+Buğday:
+   Precision: 0.9950
+   Recall: 0.9851
+   F1-Score: 0.9900
+   True Positives: 199
+   False Positives: 1
+   False Negatives: 3
+   True Negatives: 110
+
+Ceviz:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 309
+
+Domates:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 40
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 273
+
+Elma:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 25
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 288
+
+Fasulye:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 9
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 304
+
+Fındık:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 20
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 293
+
+Fıstık:
+   Precision: 0.6667
+   Recall: 1.0000
+   F1-Score: 0.8000
+   True Positives: 2
+   False Positives: 1
+   False Negatives: 0
+   True Negatives: 310
+
+Gül:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 1
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 312
+
+Haşhaş:
+   Precision: 1.0000
+   Recall: 0.8000
+   F1-Score: 0.8889
+   True Positives: 4
+   False Positives: 0
+   False Negatives: 1
+   True Negatives: 308
+
+Kayısı:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 17
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 296
+
+Kiraz:
+   Precision: 0.9167
+   Recall: 1.0000
+   F1-Score: 0.9565
+   True Positives: 11
+   False Positives: 1
+   False Negatives: 0
+   True Negatives: 301
+
+Kivi:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 309
+
+Mercimek:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 300
+
+Muz:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 1
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 312
+
+Mısır:
+   Precision: 0.9706
+   Recall: 0.9429
+   F1-Score: 0.9565
+   True Positives: 33
+   False Positives: 1
+   False Negatives: 2
+   True Negatives: 277
+
+Narenciye:
+   Precision: 0.8750
+   Recall: 1.0000
+   F1-Score: 0.9333
+   True Positives: 14
+   False Positives: 2
+   False Negatives: 0
+   True Negatives: 297
+
+Nohut:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 300
+
+Pamuk:
+   Precision: 1.0000
+   Recall: 0.9623
+   F1-Score: 0.9808
+   True Positives: 51
+   False Positives: 0
+   False Negatives: 2
+   True Negatives: 260
+
+Patates:
+   Precision: 1.0000
+   Recall: 0.9583
+   F1-Score: 0.9787
+   True Positives: 69
+   False Positives: 0
+   False Negatives: 3
+   True Negatives: 241
+
+Patlıcan:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 14
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 299
+
+Pirinç:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 6
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 307
+
+Sarımsak:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 5
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 308
+
+Sebze:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 309
+
+Turunçgiller:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 309
+
+Tütün:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 10
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 303
+
+Yer Fıstığı:
+   Precision: 0.0000
+   Recall: 0.0000
+   F1-Score: 0.0000
+   True Positives: 0
+   False Positives: 1
+   False Negatives: 0
+   True Negatives: 312
+
+Zeytin:
+   Precision: 0.9818
+   Recall: 1.0000
+   F1-Score: 0.9908
+   True Positives: 54
+   False Positives: 1
+   False Negatives: 0
+   True Negatives: 258
+
+Çay:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 4
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 309
+
+Çilek:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 3
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 310
+
+Üzüm:
+   Precision: 0.9750
+   Recall: 1.0000
+   F1-Score: 0.9873
+   True Positives: 39
+   False Positives: 1
+   False Negatives: 0
+   True Negatives: 273
+
+İncir:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 1
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 312
+
+Şeftali:
+   Precision: 1.0000
+   Recall: 1.0000
+   F1-Score: 1.0000
+   True Positives: 13
+   False Positives: 0
+   False Negatives: 0
+   True Negatives: 300
+
+Şeker Pancarı:
+   Precision: 0.9765
+   Recall: 0.9765
+   F1-Score: 0.9765
+   True Positives: 83
+   False Positives: 2
+   False Negatives: 2
+   True Negatives: 226
+
+Şerbetçi Otu:
+   Precision: 0.5000
+   Recall: 1.0000
+   F1-Score: 0.6667
+   True Positives: 1
+   False Positives: 1
+   False Negatives: 0
+   True Negatives: 311
+
+GENEL ÖZET VE META BİLGİLER
+----------------------------------------
+En İyi Model: RandomForest
+En İyi F1-Macro: 0.9487
+Eğitim Tarihi: 2025-11-05 17:29:21
+Ürünler: Arpa, Ayçiçeği, Badem, Biber, Buğday, Ceviz, Domates, Elma, Fasulye, Fındık, Fıstık, Gül, Haşhaş, Kayısı, Kiraz, Kivi, Mercimek, Muz, Mısır, Narenciye, Nohut, Pamuk, Patates, Patlıcan, Pirinç, Sarımsak, Sebze, Turunçgiller, Tütün, Yer Fıstığı, Zeytin, Çay, Çilek, Üzüm, İncir, Şeftali, Şeker Pancarı, Şerbetçi Otu
+================================================================================
+RAPOR SONU
+================================================================================
