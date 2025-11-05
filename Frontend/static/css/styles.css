@@ -872,6 +872,12 @@ body {
     border: 1px solid var(--border-color);
 }
 
+/* Streaming kelime animasyonu - soldan sağa fade-in */
+.streaming-word {
+    display: inline-block;
+    will-change: opacity, transform;
+}
+
 .message-time {
     font-size: clamp(0.65rem, 1.4vw, 0.75rem);
     color: var(--text-secondary);

@@ -129,8 +129,12 @@ class UmayChat {
         try {
             const botResponse = await this.getBotResponse(message);
             this.hideTyping();
-            // Streaming olarak kelime kelime göster
-            this.streamMessage(botResponse, 'bot');
+            
+            // Önce formatlamayı yap (markdown ve HTML etiketleri)
+            const formattedResponse = this.formatMessage(botResponse);
+            
+            // Formatlanmış metni streaming olarak kelime kelime göster
+            this.streamMessage(formattedResponse, 'bot');
         } catch (error) {
             this.hideTyping();
             this.addMessage("Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.", 'bot');
@@ -180,6 +184,13 @@ class UmayChat {
             .replace(/\*(.*?)\*/g, '<em>$1</em>');
     }
     
+    escapeHtml(text) {
+        // HTML karakterlerini escape et
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     streamMessage(content, sender) {
         // Mesajı streaming olarak kelime kelime göster
         const message = {
@@ -204,62 +215,265 @@ class UmayChat {
         this.chatMessages.appendChild(messageDiv);
         const bubbleElement = document.getElementById(bubbleId);
         
-        // HTML etiketlerini koruyarak kelimelere ayır
-        // Önce HTML etiketlerini geçici placeholder'lara çevir
+        // Scroll kontrolü için - kullanıcı scroll yaptıysa otomatik scroll yapma
+        let shouldAutoScroll = true;
+        let userScrolled = false;
+        let scrollTimeout = null;
+        
+        // Kullanıcının en altta olup olmadığını kontrol et
+        const isNearBottom = () => {
+            const threshold = 100; // 100px tolerans
+            const scrollTop = this.chatMessages.scrollTop;
+            const scrollHeight = this.chatMessages.scrollHeight;
+            const clientHeight = this.chatMessages.clientHeight;
+            return (scrollHeight - scrollTop - clientHeight) < threshold;
+        };
+        
+        // Scroll event listener - kullanıcı scroll yaptıysa otomatik scroll'u durdur
+        const handleScroll = () => {
+            // Kullanıcı scroll yaptıysa işaretle
+            if (!userScrolled) {
+                userScrolled = true;
+                shouldAutoScroll = false;
+            }
+            
+            // Scroll timeout'u temizle
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
+            // Kullanıcı scroll'u durdurduktan 500ms sonra kontrol et
+            scrollTimeout = setTimeout(() => {
+                // Kullanıcı en alta tekrar scroll yaptıysa otomatik scroll'u etkinleştir
+                if (isNearBottom()) {
+                    userScrolled = false;
+                    shouldAutoScroll = true;
+                }
+            }, 500);
+        };
+        
+        // Scroll event listener'ı ekle
+        this.chatMessages.addEventListener('scroll', handleScroll, { passive: true });
+        
+        // HTML etiketlerini ve içeriklerini koruyarak tokenize et
+        // Önce HTML etiketlerini (açılış+kapanış ve içerik) ve metni ayrı ayrı bul
+        const tokens = [];
+        let processedContent = content;
+        let lastIndex = 0;
+        
+        // HTML etiketlerini ve içeriklerini bul (örn: <strong>text</strong>)
+        const htmlTagRegex = /<(\w+)[^>]*>([^<]*)<\/\1>/g;
+        let match;
+        
+        while ((match = htmlTagRegex.exec(processedContent)) !== null) {
+            // Etiket öncesi metni ekle
+            if (match.index > lastIndex) {
+                const beforeText = processedContent.substring(lastIndex, match.index);
+                if (beforeText.trim()) {
+                    tokens.push(...beforeText.split(/(\s+)/).filter(t => t !== ''));
+                }
+            }
+            
+            // HTML etiketini ve içeriğini tek token olarak ekle
+            tokens.push(match[0]); // <strong>text</strong>
+            
+            lastIndex = match.index + match[0].length;
+        }
+        
+        // Kalan metni ekle
+        if (lastIndex < processedContent.length) {
+            const remainingText = processedContent.substring(lastIndex);
+            if (remainingText.trim()) {
+                tokens.push(...remainingText.split(/(\s+)/).filter(t => t !== ''));
+            }
+        }
+        
+        // Tek başına kalan HTML etiketlerini de bul (<br>, <strong></strong> gibi)
+        // Önce HTML etiketlerini placeholder'lara çevir
         const tagPlaceholders = {};
         let placeholderIndex = 0;
-        let processedContent = content;
+        const standaloneTagRegex = /<[^>]+>/g;
         
-        // HTML etiketlerini sakla ve placeholder'a çevir
-        processedContent = processedContent.replace(/<[^>]+>/g, (match) => {
-            const placeholder = `__HTMLTAG_${placeholderIndex}__`;
-            tagPlaceholders[placeholder] = match;
-            placeholderIndex++;
-            return placeholder;
-        });
+        for (let i = 0; i < tokens.length; i++) {
+            // Tek başına HTML etiketi varsa (<br>, <strong></strong> gibi)
+            if (standaloneTagRegex.test(tokens[i]) && !tokens[i].includes('</')) {
+                // Eğer bu token zaten bir HTML etiketi içeriyorsa (önceki regex ile yakalanmamışsa)
+                const tagMatch = tokens[i].match(/<[^>]+>/);
+                if (tagMatch && !tokens[i].includes('</')) {
+                    const placeholder = `__HTMLTAG_${placeholderIndex}__`;
+                    tagPlaceholders[placeholder] = tokens[i];
+                    tokens[i] = placeholder;
+                    placeholderIndex++;
+                }
+            }
+        }
         
-        // Kelimelere ayır (boşluklar dahil)
-        const tokens = processedContent.split(/(\s+)/);
         let currentIndex = 0;
         
-        // Streaming fonksiyonu
+        // Streaming fonksiyonu - smooth fade-in efekti ile
         const streamWord = () => {
             if (currentIndex < tokens.length) {
                 // Token'ı al
                 let token = tokens[currentIndex];
+                let isPlaceholder = false;
+                let isHtmlTag = false;
                 
-                // Placeholder'ları gerçek HTML'e çevir
+                // Placeholder kontrolü - tam eşleşme varsa token'ı değiştir
                 for (const [placeholder, tag] of Object.entries(tagPlaceholders)) {
-                    if (token.includes(placeholder)) {
-                        token = token.replace(placeholder, tag);
+                    if (token === placeholder) {
+                        token = tag;
+                        isPlaceholder = true;
+                        isHtmlTag = true;
+                        break;
+                    } else if (token.includes(placeholder)) {
+                        token = token.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), tag);
+                        isHtmlTag = true;
                     }
                 }
                 
-                message.content += token;
+                // HTML etiketi kontrolü (tam etiket: <strong>text</strong> veya tek etiket: <br>)
+                if (!isHtmlTag && token.trim().startsWith('<')) {
+                    isHtmlTag = true;
+                }
                 
-                // Bubble'ı güncelle (formatMessage zaten HTML içeriği işliyor)
-                bubbleElement.innerHTML = this.formatMessage(message.content);
+                // HTML etiketi kontrolü
+                if (isPlaceholder || isHtmlTag) {
+                    // HTML etiketi - parse et ve ekle
+                    if (token.trim() === '<br>' || token.trim() === '<br/>' || token.trim() === '<br />') {
+                        // <br> etiketi - line break ekle
+                        bubbleElement.appendChild(document.createElement('br'));
+                        message.content += '<br>';
+                    } else if (token.trim().match(/<(\w+)[^>]*>.*?<\/\1>/)) {
+                        // Tam HTML etiketi (örn: <strong>text</strong>) - parse et ve içindeki metni animasyonlu ekle
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = token;
+                        
+                        // HTML elemanını al (örn: <strong>)
+                        const htmlElement = tempDiv.firstElementChild;
+                        if (htmlElement) {
+                            // İçindeki metni al
+                            const innerText = htmlElement.textContent;
+                            // HTML elemanını klonla
+                            const clonedElement = htmlElement.cloneNode(false); // Sadece elemanı klonla, içeriği değil
+                            
+                            // İçindeki metni kelime kelime ayır ve animasyonlu ekle
+                            if (innerText.trim()) {
+                                const words = innerText.split(/(\s+)/).filter(w => w !== '');
+                                words.forEach(word => {
+                                    if (word.trim().length === 0) {
+                                        // Boşluk
+                                        clonedElement.appendChild(document.createTextNode(word));
+                                    } else {
+                                        // Kelime - span ile sar ve animasyon ekle
+                                        const wordSpan = document.createElement('span');
+                                        wordSpan.className = 'streaming-word';
+                                        wordSpan.textContent = word;
+                                        clonedElement.appendChild(wordSpan);
+                                        
+                                        // Animasyonu tetikle
+                                        requestAnimationFrame(() => {
+                                            wordSpan.style.opacity = '0';
+                                            wordSpan.style.transform = 'translateX(-5px)';
+                                            requestAnimationFrame(() => {
+                                                wordSpan.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                                                wordSpan.style.opacity = '1';
+                                                wordSpan.style.transform = 'translateX(0)';
+                                            });
+                                        });
+                                    }
+                                });
+                            }
+                            
+                            // Elemanı bubble'a ekle
+                            bubbleElement.appendChild(clonedElement);
+                        } else {
+                            // Parse edilemediyse direkt innerHTML ile ekle
+                            const tempDiv2 = document.createElement('div');
+                            tempDiv2.innerHTML = token;
+                            while (tempDiv2.firstChild) {
+                                bubbleElement.appendChild(tempDiv2.firstChild);
+                            }
+                        }
+                        message.content += token;
+                    } else {
+                        // Diğer HTML etiketleri - innerHTML ile parse et
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = token;
+                        while (tempDiv.firstChild) {
+                            bubbleElement.appendChild(tempDiv.firstChild);
+                        }
+                        message.content += token;
+                    }
+                } else if (token.trim().length === 0) {
+                    // Boşluk - text node olarak ekle
+                    bubbleElement.appendChild(document.createTextNode(token));
+                    message.content += token;
+                } else {
+                    // Kelime - span ile sar ve animasyon ekle
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = 'streaming-word';
+                    wordSpan.textContent = token;
+                    
+                    // Bubble'a direkt ekle
+                    bubbleElement.appendChild(wordSpan);
+                    
+                    // Animasyonu tetiklemek için requestAnimationFrame kullan
+                    requestAnimationFrame(() => {
+                        wordSpan.style.opacity = '0';
+                        wordSpan.style.transform = 'translateX(-5px)';
+                        // Animasyonu başlat
+                        requestAnimationFrame(() => {
+                            wordSpan.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                            wordSpan.style.opacity = '1';
+                            wordSpan.style.transform = 'translateX(0)';
+                        });
+                    });
+                    
+                    // message.content'i güncelle (kayıt için)
+                    message.content += `<span class="streaming-word">${this.escapeHtml(token)}</span>`;
+                }
                 
-                // Scroll to bottom
-                this.scrollToBottom();
+                // Scroll kontrolü ile scroll yap - sadece kullanıcı en alttayken
+                if (shouldAutoScroll && isNearBottom()) {
+                    this.scrollToBottom();
+                }
                 
                 currentIndex++;
                 
-                // Kelime hızı (msn cinsinden)
-                // Kelimeler için 50ms, boşluklar için 20ms, HTML etiketleri için 10ms
-                let delay = 50;
+                // Kelime hızı (msn cinsinden) - İKİ KAT HIZLI (yarıya indirilmiş)
+                // Kelimeler için 25ms (eski 50ms), boşluklar için 10ms (eski 20ms), HTML etiketleri için 5ms (eski 10ms)
+                let delay = 25;
                 if (token.trim().length === 0) {
-                    delay = 20; // Boşluk
-                } else if (token.trim().startsWith('<')) {
-                    delay = 10; // HTML etiketi
+                    delay = 10; // Boşluk
+                } else if (token.trim().startsWith('<') || token.trim().startsWith('&')) {
+                    delay = 5; // HTML etiketi veya HTML entity
                 }
                 
                 setTimeout(streamWord, delay);
             } else {
                 // Streaming tamamlandı
-                message.streaming = false;
-                this.messages.push(message);
-                this.saveMessages();
+                // Event listener'ı kaldır
+                this.chatMessages.removeEventListener('scroll', handleScroll);
+                
+                // Scroll timeout'u temizle
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+                
+                // Streaming tamamlandı - formatlama zaten streaming başlamadan önce yapıldı
+                // Sadece final içeriği kaydet
+                message.content = bubbleElement.innerHTML;
+                
+                // Son bir kez scroll yap - sadece kullanıcı en alttayken
+                if (!userScrolled || isNearBottom()) {
+                    this.scrollToBottom();
+                }
+                
+                setTimeout(() => {
+                    message.streaming = false;
+                    this.messages.push(message);
+                    this.saveMessages();
+                }, 100);
             }
         };
         
@@ -348,8 +562,9 @@ class UmayChat {
                 }
             }
             
-            // Satır sonlarını <br> ile değiştir
-            botResponse = botResponse.replace(/\\n/g, '\n').replace(/\n/g, '<br>');
+            // Sadece ham metni döndür (formatlama sendMessage'da yapılacak)
+            // Satır sonlarını normalize et (\n olarak tut)
+            botResponse = botResponse.replace(/\\n/g, '\n');
             
             return botResponse;
             
@@ -606,10 +821,16 @@ class UmayChat {
         localStorage.setItem('chatMessages', JSON.stringify(this.messages));
     }
     
-    scrollToBottom() {
-        setTimeout(() => {
+    scrollToBottom(smooth = false) {
+        if (smooth) {
+            this.chatMessages.scrollTo({
+                top: this.chatMessages.scrollHeight,
+                behavior: 'smooth'
+            });
+        } else {
+            // Hızlı scroll - direkt pozisyon
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        }, 100);
+        }
     }
     
     toggleTheme() {
@@ -1236,3 +1457,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Typing indicator stilleri CSS'te zaten var, ek bir stil gerekmiyor
+
