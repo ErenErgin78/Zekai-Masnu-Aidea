@@ -233,98 +233,9 @@ class SoilAnalysisService:
         self._load_turkey_bounds()
     
     def _load_turkey_bounds(self):
-        """Türkiye sınırlarını shapefile'dan yükle (dayanıklı yöntem)"""
-        try:
-            if not os.path.exists(self.country_shapefile):
-                logger.warning("Country shapefile not found, using fallback bounds")
-                self._set_fallback_bounds()
-                return
-            
-            # Shapefile'ı yükle
-            gdf = gpd.read_file(self.country_shapefile)
-            if gdf is None or gdf.empty:
-                logger.warning("Country shapefile is empty, using fallback bounds")
-                self._set_fallback_bounds()
-                return
-            
-            # CRS'yi WGS84 (EPSG:4326) yap
-            try:
-                if gdf.crs is None or gdf.crs.to_epsg() != 4326:
-                    gdf = gdf.to_crs(epsg=4326)
-            except Exception as _:
-                # CRS dönüştürülemezse yine de devam et
-                pass
-            
-            # Türkiye'yi bulmak için olası kolonlar ve değerler
-            candidate_columns = [
-                'NAME', 'NAME_EN', 'COUNTRY', 'NAME_0', 'ADMIN', 'SOVEREIGNT',
-                'ADM0_A3', 'ISO_A3', 'ISO3', 'ISO2', 'CNTRY_NAME'
-            ]
-            name_variants_contains = ['Turkey', 'Türkiye']
-            code_equals = ['TUR', 'TR']
-            
-            turkey_gdf = None
-            for col in candidate_columns:
-                if col in gdf.columns:
-                    # Metin içerik eşleşmesi
-                    if gdf[col].dtype == object:
-                        mask_contains = gdf[col].astype(str).str.contains('|'.join(name_variants_contains), case=False, na=False)
-                    else:
-                        mask_contains = None
-                    
-                    # Kod eşitlik eşleşmesi
-                    mask_equals = gdf[col].astype(str).isin(code_equals) if gdf[col].dtype == object else None
-                    
-                    combined_mask = None
-                    if mask_contains is not None and mask_equals is not None:
-                        combined_mask = mask_contains | mask_equals
-                    elif mask_contains is not None:
-                        combined_mask = mask_contains
-                    elif mask_equals is not None:
-                        combined_mask = mask_equals
-                    
-                    if combined_mask is not None and combined_mask.any():
-                        turkey_gdf = gdf[combined_mask]
-                        break
-            
-            # Hala bulunamadıysa, kabaca Türkiye bbox'una göre mekansal filtre dene
-            if (turkey_gdf is None) or turkey_gdf.empty:
-                try:
-                    approx_min_lon, approx_max_lon = 25.0, 46.0
-                    approx_min_lat, approx_max_lat = 35.0, 43.5
-                    bbox = gpd.GeoDataFrame(geometry=[gpd.points_from_xy([approx_min_lon, approx_max_lon], [approx_min_lat, approx_max_lat]).unary_union.envelope], crs="EPSG:4326")
-                    intersects_mask = gdf.geometry.intersects(bbox.geometry.iloc[0])
-                    if intersects_mask.any():
-                        # İçinde "Turkey"/"Türkiye" geçenlerden öncelik ver
-                        subset = gdf[intersects_mask]
-                        for col in candidate_columns:
-                            if col in subset.columns and subset[col].dtype == object:
-                                sub_mask = subset[col].astype(str).str.contains('|'.join(name_variants_contains), case=False, na=False)
-                                if sub_mask.any():
-                                    turkey_gdf = subset[sub_mask]
-                                    break
-                        if (turkey_gdf is None) or turkey_gdf.empty:
-                            turkey_gdf = subset
-                except Exception as _:
-                    pass
-            
-            if turkey_gdf is not None and not turkey_gdf.empty:
-                # Çoklu geometri varsa birleştir
-                try:
-                    turkey_geom = turkey_gdf.geometry.unary_union
-                except Exception:
-                    # Son çare: ilk geometriyi al
-                    turkey_geom = turkey_gdf.geometry.iloc[0]
-                self.turkey_bounds = turkey_geom
-                logger.info("Turkey bounds loaded successfully from shapefile")
-                return
-            
-            # Başarısızsa fallback
-            logger.warning("Turkey not found in shapefile after all strategies, using fallback bounds")
-            self._set_fallback_bounds()
-        except Exception as e:
-            logger.error(f"Error loading Turkey bounds: {str(e)}")
-            self._set_fallback_bounds()
+        """Türkiye sınırlarını fallback bounds ile direkt yükle"""
+        # Shapefile arama sistemini kaldırdık, direkt fallback bounds kullanılıyor
+        self._set_fallback_bounds()
     
     def _set_fallback_bounds(self):
         """Yedek sınırları ayarla (basit dikdörtgen)"""
@@ -334,9 +245,7 @@ class SoilAnalysisService:
             'min_lat': 36.0,
             'max_lat': 42.0
         }
-        logger.info("Using fallback Turkey bounds")
-        print(f"[TurkeyBounds] Fallback rectangle in use: lon=[{self.turkey_bounds['min_lon']}, {self.turkey_bounds['max_lon']}], lat=[{self.turkey_bounds['min_lat']}, {self.turkey_bounds['max_lat']}]")
-    
+
     def _is_point_in_turkey(self, longitude: float, latitude: float) -> bool:
         """Noktanın Türkiye sınırları içinde olup olmadığını kontrol et"""
         try:
@@ -1032,7 +941,6 @@ class SoilAnalysisService:
 # Servis instance'ı oluştur
 try:
     soil_service = SoilAnalysisService()
-    logger.info("Soil Analysis Service initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize Soil Analysis Service: {str(e)}")
     soil_service = None

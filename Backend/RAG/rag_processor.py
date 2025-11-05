@@ -81,12 +81,7 @@ class RAGProcessor:
         self.tokenizer = None
         if TOKENIZER_AVAILABLE:
             try:
-                print("🔧 MULTILINGUAL Tokenizer yükleniyor...")  # 🎯 MODEL İSMİ
                 self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-                
-                # 🎯 TOKEN LİMİT BİLGİSİ EKLE
-                model_max_length = self.tokenizer.model_max_length
-                print(f"🎉 MULTILINGUAL Token Limit: {model_max_length}")
                 
                 print("✅ Tokenizer hazır")
             except Exception as e:
@@ -134,8 +129,6 @@ class RAGProcessor:
             if not os.path.exists(sqlite_file):
                 print(f"⚠️ chroma.sqlite3 bulunamadı: {sqlite_file}")
                 return False
-            
-            print(f"📂 Vektör veritabanı yükleniyor: {self.vector_store_path}")
             
             self.vector_store = Chroma(
                 persist_directory=self.vector_store_path,
