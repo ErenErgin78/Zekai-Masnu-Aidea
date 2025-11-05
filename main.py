@@ -476,152 +476,39 @@ service_manager = UmayServiceManager()
 
 # --- Ana Uygulama ---
 async def main():
-    """Ana uygulama"""
-    print("🌍 UMAY Merkezi Sistem")
-    print("=" * 50)
-    
-    await service_manager.initialize_services()
-    
-    while True:
-        print("\n🔧 Kullanılabilir Servisler:")
-        services = service_manager.list_services()
-        for service_type, service_list in services.items():
-            print(f"  {service_type}: {service_list}")
+    """Ana uygulama - Web API modu"""
+    # main_chatbot.py'yi import edip onun main fonksiyonunu çağır
+    try:
+        # LLM dizinini path'e ekle
+        llm_dir = os.path.join(PathConfig.BASE_DIR, "LLM")
         
-        print("\n🎮 İşlem Seçin:")
-        print("1. Manuel Toprak Analizi")
-        print("2. Otomatik Konum Analizi")
-        print("3. RAG Sohbet")
-        print("4. Tool ile Analiz")
-        print("5. Chain ile Analiz")
-        print("6. Agent ile Araştırma")
-        print("7. Servis Bilgileri")
-        print("8. Çıkış")
+        # main_chatbot.py dosyasının yolunu oluştur
+        main_chatbot_path = os.path.join(llm_dir, "main_chatbot.py")
         
-        choice = input("\nSeçiminiz (1-8): ").strip()
+        if not os.path.exists(main_chatbot_path):
+            raise FileNotFoundError(f"main_chatbot.py bulunamadı: {main_chatbot_path}")
         
-        if choice == '1':
-            try:
-                lon = float(input("Boylam: "))
-                lat = float(input("Enlem: "))
-                result = await service_manager.soil_analysis(lon, lat)
-                print(f"📊 Toprak Verisi: {result.get('soil_id', 'N/A')}")
-            except Exception as e:
-                print(f"❌ Hata: {e}")
-                
-        elif choice == '2':
-            try:
-                result = await service_manager.automatic_location_analysis()
-                print(f"📍 Koordinatlar: {result['coordinates']}")
-                print(f"🌱 Açıklama: {result['explanation']}")
-            except Exception as e:
-                print(f"❌ Hata: {e}")
-                
-        elif choice == '3':
-            try:
-                question = input("Soru: ")
-                response, sources = service_manager.rag_chat(question)
-                print(f"🤖 Cevap: {response}")
-                if sources:
-                    print(f"📚 Kaynaklar: {len(sources)} adet")
-            except Exception as e:
-                print(f"❌ Hata: {e}")
-            
-        elif choice == '4':
-            try:
-                print("\n🛠️ Mevcut Tool'lar:")
-                for tool_name in service_manager.tools.keys():
-                    tool_desc = service_manager.tools[tool_name]['instance'].description
-                    print(f"  - {tool_name}: {tool_desc}")
-                
-                tool_choice = input("\nTool seçin: ")
-                
-                if tool_choice == "weather_tool":
-                    city = input("Şehir: ")
-                    result = service_manager.analyze_with_tool(tool_choice, city)
-                    print(f"🌤️ Sonuç: {result}")
-                
-                elif tool_choice == "rag_tool":
-                    question = input("Soru: ")
-                    result = service_manager.analyze_with_tool(tool_choice, question)
-                    print(f"📚 Sonuç:\n{result}")
-                
-                elif tool_choice in ["soil_analyzer_tool", "data_visualizer_tool"]:
-                    lon = float(input("Boylam: "))
-                    lat = float(input("Enlem: "))
-                    soil_data = await service_manager.soil_analysis(lon, lat)
-                    result = service_manager.analyze_with_tool(tool_choice, soil_data)
-                    print(f"🌱 Sonuç: {result}")
-                
-            except Exception as e:
-                print(f"❌ Hata: {e}")
-                
-        elif choice == '5':
-            try:
-                print("\n⛓️ Mevcut Chain'ler:")
-                for chain_name in service_manager.chains.keys():
-                    print(f"  - {chain_name}")
-                
-                chain_choice = input("Chain seçin: ")
-                
-                if chain_choice == "analysis_chain":
-                    lon = float(input("Boylam: "))
-                    lat = float(input("Enlem: "))
-                    soil_data = await service_manager.soil_analysis(lon, lat)
-                    
-                    result = service_manager.run_chain(chain_choice, soil_data)
-                    
-                    if result["success"]:
-                        print(f"\n{result['results']['final_report']}")
-                    else:
-                        print(f"❌ Chain hatası: {result['error']}")
-                
-            except Exception as e:
-                print(f"❌ Hata: {e}")
-                
-        elif choice == '6':
-            try:
-                print("\n🤖 Mevcut Agent'lar:")
-                for agent_name in service_manager.agents.keys():
-                    print(f"  - {agent_name}")
-                
-                agent_choice = input("Agent seçin: ")
-                
-                if agent_choice == "research_agent":
-                    query = input("Araştırma sorusu: ")
-                    
-                    use_soil = input("Toprak verisi kullan? (e/h): ").lower()
-                    soil_data = None
-                    
-                    if use_soil == 'e':
-                        lon = float(input("Boylam: "))
-                        lat = float(input("Enlem: "))
-                        soil_data = await service_manager.soil_analysis(lon, lat)
-                    
-                    result = service_manager.run_agent(agent_choice, query, soil_data)
-                    
-                    if result["success"]:
-                        print(f"\n🔍 Bulgular: {len(result['findings'])} adet")
-                        print(f"💡 Öneriler:")
-                        for rec in result["recommendations"]:
-                            print(f"  • {rec}")
-                    else:
-                        print(f"❌ Agent hatası: {result['error']}")
-                
-            except Exception as e:
-                print(f"❌ Hata: {e}")
-                
-        elif choice == '7':
-            services = service_manager.list_services()
-            for service_type, service_list in services.items():
-                print(f"{service_type}: {service_list}")
-                
-        elif choice == '8':
-            print("👋 Görüşmek üzere!")
-            break
-            
-        else:
-            print("❌ Geçersiz seçim!")
+        # importlib kullanarak güvenli import
+        spec = importlib.util.spec_from_file_location("main_chatbot", main_chatbot_path)
+        main_chatbot_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(main_chatbot_module)
+        
+        # main_chatbot'un main fonksiyonunu çağır
+        await main_chatbot_module.main()
+        
+    except FileNotFoundError as e:
+        print(f"❌ Dosya bulunamadı: {e}")
+        print("💡 LLM/main_chatbot.py dosyasının mevcut olduğundan emin olun")
+        raise
+    except ImportError as e:
+        print(f"❌ main_chatbot import hatası: {e}")
+        print("💡 LLM/main_chatbot.py dosyasının mevcut olduğundan emin olun")
+        raise
+    except Exception as e:
+        print(f"❌ Web API başlatma hatası: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 if __name__ == "__main__":
     asyncio.run(main())

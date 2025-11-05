@@ -126,8 +126,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ### Adım 4: Sistemi Başlatın
 
 ```bash
-cd LLM  
-python main_chatbot.py
+python main.py
 ```
 
 ### Adım 5: Frontend'e Erişin

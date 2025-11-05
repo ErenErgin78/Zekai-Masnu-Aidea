@@ -118,7 +118,6 @@ except Exception as e:
 async def start_soil_api():
     """API server'ını otomatik başlat (Soil + Weather)"""
     global api_process
-    print("🔧 Soil+Weather API server başlatılıyor...")
     
     try:
         # API'nin çalışıp çalışmadığını kontrol et
@@ -143,8 +142,6 @@ async def start_soil_api():
             print(f"❌ Virtual environment bulunamadı: {env_python}")
             return False
         
-        print(f"🔍 Virtual environment Python: {env_python}")
-        
         # Uvicorn'u subprocess olarak başlat ve global değişkene kaydet
         # stdout/stderr'i DEVNULL'a yönlendir - buffer dolmasını önler ve API'lerin kapanmasını engeller
         api_process = subprocess.Popen([
@@ -156,7 +153,6 @@ async def start_soil_api():
         ], cwd=api_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         # Başlatılmasını bekle
-        print("⏳ Soil+Weather API başlatılıyor...")
         time.sleep(5)
         
         # Kontrol et
@@ -181,7 +177,6 @@ async def start_soil_api():
         return False
 async def start_ml_api():
     """ML API server'ını otomatik başlat (8003)."""
-    print("🔧 ML API server başlatılıyor (8003)...")
     try:
         # Çalışıyor mu?
         import httpx
@@ -306,7 +301,6 @@ async def run_web_api():
         return
     
     print("\n🚀 Web API sunucusu başlatılıyor...")
-    print("📱 Frontend: Frontend/index.html dosyasını tarayıcıda açın")
     print("🔗 Chatbot API: http://localhost:8001")
     print("🌱 Soil+Weather API: http://localhost:8000")
     print("📚 Docs: http://localhost:8001/docs")
@@ -326,9 +320,6 @@ async def initialize_chatbot():
     """Chatbot'u başlat (input beklemeden)"""
     global chatbot_instance, service_manager_instance
     
-    print("🌱 UMAY Tarım Asistanı")
-    print("=" * 60)
-
     # ✅ 1. SOIL+WEATHER API'Yİ BAŞLAT
     soil_api_started = await start_soil_api()
     if not soil_api_started:
@@ -340,9 +331,6 @@ async def initialize_chatbot():
     if not ml_api_started:
         print("❌ ML API olmadan devam edilemez!")
         return False
-
-    print("Organik tarım, toprak analizi ve hava durumu asistanınız!")
-    print("=" * 60)
     
     # Service Manager'ı başlat
     print("\n🔧 Servisler başlatılıyor...")
