@@ -5,10 +5,17 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from SoilType import soil_api as soil_router
 from Weather import router as weather_router
+from Auth.routers import users 
+from Auth.routers import register
 from MachineLearning import ml_api as ml_router
+
 import logging
 
-
+# <<< Cache için gerekli import'lar
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis import asyncio as aioredis
+# >>>
 
 # Logging konfigürasyonu
 logging.basicConfig(
@@ -24,6 +31,21 @@ app = FastAPI(
     description="Soil Analysis and Weather API"
 )
 
+# <<< YENİ: Cache'i başlatan startup event'i
+@app.on_event("startup")
+async def startup():
+    """
+    Uygulama başladığında Redis'e bağlan ve cache'i başlat.
+    """
+    try:
+        # Redis bağlantısı (localhost'taki varsayılan porta bağlanır)
+        redis_conn = aioredis.from_url("redis://localhost:6379")
+        FastAPICache.init(RedisBackend(redis_conn), prefix="aidea-cache")
+        logger.info("Redis cache bağlantısı başarıyla kuruldu.")
+    except Exception as e:
+        logger.error(f"Redis cache'e bağlanırken hata oluştu: {e}")
+# >>>
+
 
 # CORS middleware ekle
 app.add_middleware(
@@ -36,6 +58,8 @@ app.add_middleware(
 # Router'ları ekle
 app.include_router(soil_router.router)
 app.include_router(weather_router.router)
+app.include_router(users.router)
+app.include_router(register.router)
 app.include_router(ml_router.router)
 
 # Ana endpoint'ler
