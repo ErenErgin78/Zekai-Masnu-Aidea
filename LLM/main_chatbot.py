@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import uvicorn
 import re
+from typing import Optional
 
 # Çıkışta API süreçlerini durdur
 api_process = None
@@ -59,7 +60,7 @@ app.mount("/static", StaticFiles(directory=PathConfig.FRONTEND_STATIC_DIR), name
 class ChatRequest(BaseModel):
     message: str
     conversation_id: int = 0
-    user_location: dict = None
+    user_location: Optional[dict] = None
 
 class ChatResponse(BaseModel):
     success: bool
