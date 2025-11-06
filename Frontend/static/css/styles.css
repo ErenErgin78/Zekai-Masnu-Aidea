@@ -533,6 +533,28 @@ body {
     height: clamp(9.375rem, 20vh, 9.375rem);
 }
 
+.weather-apparent-temp-chart-container {
+    margin: clamp(0.75rem, 1.5vh, 1rem) 0;
+    padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.25rem, 2.5vw, 1.5rem);
+    background: var(--bg-glass);
+    border-radius: var(--radius-md);
+    height: clamp(8rem, 18vh, 10rem);
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.weather-apparent-temp-chart-container canvas {
+    max-width: 100%;
+}
+
+.weather-chart-title {
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+    text-align: center;
+}
+
 .weather-details {
     display: flex;
     flex-direction: column;

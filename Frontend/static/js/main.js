@@ -125,16 +125,13 @@ class UmayChat {
         // Yazıyor göstergesini göster
         this.showTyping();
         
-        // Bot cevabını API'den al ve streaming olarak göster
+        // Bot cevabını API'den al ve direkt göster
         try {
             const botResponse = await this.getBotResponse(message);
             this.hideTyping();
             
-            // Önce formatlamayı yap (markdown ve HTML etiketleri)
-            const formattedResponse = this.formatMessage(botResponse);
-            
-            // Formatlanmış metni streaming olarak kelime kelime göster
-            this.streamMessage(formattedResponse, 'bot');
+            // Mesajı direkt göster (formatlama renderMessage içinde yapılacak)
+            this.addMessage(botResponse, 'bot');
         } catch (error) {
             this.hideTyping();
             this.addMessage("Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.", 'bot');
@@ -177,11 +174,115 @@ class UmayChat {
     }
     
     formatMessage(content) {
-        // Basit biçimleme
-        return content
+        // Basit biçimleme - önce markdown formatlamasını yap
+        let formatted = content
             .replace(/\n/g, '<br>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Formatlamadan sonra kalan ham markdown etiketlerini temizle
+        // HTML etiketleri içindeki * karakterlerini korumak için önce HTML etiketlerini placeholder'a çevir
+        const htmlTagPlaceholders = {};
+        let placeholderIndex = 0;
+        
+        // HTML etiketlerini placeholder'a çevir
+        formatted = formatted.replace(/<[^>]+>/g, (match) => {
+            const placeholder = `__HTMLPLACEHOLDER_${placeholderIndex}__`;
+            htmlTagPlaceholders[placeholder] = match;
+            placeholderIndex++;
+            return placeholder;
+        });
+        
+        // Kalan ** ve * karakterlerini temizle
+        formatted = formatted.replace(/\*\*/g, ''); // Kalan ** karakterlerini kaldır
+        formatted = formatted.replace(/\*/g, ''); // Kalan * karakterlerini kaldır
+        
+        // Placeholder'ları geri çevir
+        for (const [placeholder, htmlTag] of Object.entries(htmlTagPlaceholders)) {
+            formatted = formatted.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), htmlTag);
+        }
+        
+        // Eşleşmeyen/bozuk HTML etiketlerini temizle
+        formatted = this.cleanMismatchedHtmlTags(formatted);
+        
+        return formatted;
+    }
+    
+    cleanMismatchedHtmlTags(html) {
+        // Eşleşmeyen HTML etiketlerini temizle
+        // Önce tüm etiketleri ve pozisyonlarını bul
+        const tagStack = [];
+        const tags = [];
+        const tagRegex = /<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
+        let match;
+        
+        // Tüm etiketleri topla
+        while ((match = tagRegex.exec(html)) !== null) {
+            tags.push({
+                fullTag: match[0],
+                tagName: match[1].toLowerCase(),
+                index: match.index,
+                isClosing: match[0].startsWith('</'),
+                isSelfClosing: match[0].endsWith('/>') || match[1].toLowerCase() === 'br' || match[1].toLowerCase() === 'img' || match[1].toLowerCase() === 'hr'
+            });
+        }
+        
+        // Eşleşmeyen etiketleri bul
+        const tagsToRemove = [];
+        
+        for (let i = 0; i < tags.length; i++) {
+            const tag = tags[i];
+            
+            if (tag.isClosing) {
+                // Kapanış etiketi - eşleşen açılış etiketi var mı kontrol et
+                const lastOpenIndex = tagStack.lastIndexOf(tag.tagName);
+                if (lastOpenIndex !== -1) {
+                    // Eşleşen açılış etiketi var - stack'ten kaldır
+                    tagStack.splice(lastOpenIndex, 1);
+                } else {
+                    // Eşleşmeyen kapanış etiketi - kaldırılacak
+                    tagsToRemove.push(tag);
+                }
+            } else if (!tag.isSelfClosing) {
+                // Açılış etiketi (self-closing değil) - stack'e ekle
+                tagStack.push(tag.tagName);
+            }
+        }
+        
+        // Eşleşmeyen etiketleri kaldır (ters sırada - son indexten başa)
+        tagsToRemove.sort((a, b) => b.index - a.index);
+        for (const tag of tagsToRemove) {
+            html = html.substring(0, tag.index) + html.substring(tag.index + tag.fullTag.length);
+        }
+        
+        return html;
+    }
+    
+    cleanBrokenHtmlTags(html) {
+        // Bozuk HTML yapılarını temizle
+        // Örnek: <br><br></em>, <br></strong>, vb.
+        
+        // 1. Self-closing etiketlerden sonra gelen eşleşmeyen kapanış etiketlerini temizle
+        // Örnek: <br></em>, <br></strong>, <br><br></em>
+        html = html.replace(/(<(?:br|img|hr|input)[^>]*>)\s*<\/[^>]+>/gi, '$1');
+        
+        // 2. Ardışık <br> etiketlerini normalize et (maksimum 2'ye indir)
+        html = html.replace(/(<br[^>]*>\s*){3,}/gi, '<br><br>');
+        
+        // 3. Boş HTML etiketlerini temizle (örn: <strong></strong>, <em></em>)
+        html = html.replace(/<(strong|em|b|i|u|span)[^>]*>\s*<\/\1>/gi, '');
+        
+        // 4. Sadece açılış etiketi olan ama içerik olmayan yapıları temizle
+        // Örnek: <strong> </strong> (sadece boşluk içeren)
+        html = html.replace(/<(strong|em|b|i|u|span)[^>]*>\s*<\/\1>/gi, '');
+        
+        // 5. Self-closing etiketlerden hemen önce gelen boşlukları temizle
+        html = html.replace(/\s+(<(?:br|img|hr|input)[^>]*>)/gi, '$1');
+        
+        // 6. Kapanış etiketlerinden önce gelen gereksiz boşlukları temizle
+        html = html.replace(/\s+(<\/[^>]+>)/gi, '$1');
+        
+        return html;
     }
     
     escapeHtml(text) {
@@ -189,296 +290,6 @@ class UmayChat {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-    
-    streamMessage(content, sender) {
-        // Mesajı streaming olarak kelime kelime göster
-        const message = {
-            content: '',
-            sender,
-            timestamp: new Date().toLocaleTimeString('tr-TR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            }),
-            streaming: true
-        };
-        
-        // Mesaj div'ini oluştur
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}`;
-        const bubbleId = 'streamingBubble_' + Date.now();
-        messageDiv.innerHTML = `
-            <div class="message-bubble" id="${bubbleId}"></div>
-            <div class="message-time">${message.timestamp}</div>
-        `;
-        
-        this.chatMessages.appendChild(messageDiv);
-        const bubbleElement = document.getElementById(bubbleId);
-        
-        // Scroll kontrolü için - kullanıcı scroll yaptıysa otomatik scroll yapma
-        let shouldAutoScroll = true;
-        let userScrolled = false;
-        let scrollTimeout = null;
-        
-        // Kullanıcının en altta olup olmadığını kontrol et
-        const isNearBottom = () => {
-            const threshold = 100; // 100px tolerans
-            const scrollTop = this.chatMessages.scrollTop;
-            const scrollHeight = this.chatMessages.scrollHeight;
-            const clientHeight = this.chatMessages.clientHeight;
-            return (scrollHeight - scrollTop - clientHeight) < threshold;
-        };
-        
-        // Scroll event listener - kullanıcı scroll yaptıysa otomatik scroll'u durdur
-        const handleScroll = () => {
-            // Kullanıcı scroll yaptıysa işaretle
-            if (!userScrolled) {
-                userScrolled = true;
-                shouldAutoScroll = false;
-            }
-            
-            // Scroll timeout'u temizle
-            if (scrollTimeout) {
-                clearTimeout(scrollTimeout);
-            }
-            
-            // Kullanıcı scroll'u durdurduktan 500ms sonra kontrol et
-            scrollTimeout = setTimeout(() => {
-                // Kullanıcı en alta tekrar scroll yaptıysa otomatik scroll'u etkinleştir
-                if (isNearBottom()) {
-                    userScrolled = false;
-                    shouldAutoScroll = true;
-                }
-            }, 500);
-        };
-        
-        // Scroll event listener'ı ekle
-        this.chatMessages.addEventListener('scroll', handleScroll, { passive: true });
-        
-        // HTML etiketlerini ve içeriklerini koruyarak tokenize et
-        // Önce HTML etiketlerini (açılış+kapanış ve içerik) ve metni ayrı ayrı bul
-        const tokens = [];
-        let processedContent = content;
-        let lastIndex = 0;
-        
-        // HTML etiketlerini ve içeriklerini bul (örn: <strong>text</strong>)
-        const htmlTagRegex = /<(\w+)[^>]*>([^<]*)<\/\1>/g;
-        let match;
-        
-        while ((match = htmlTagRegex.exec(processedContent)) !== null) {
-            // Etiket öncesi metni ekle
-            if (match.index > lastIndex) {
-                const beforeText = processedContent.substring(lastIndex, match.index);
-                if (beforeText.trim()) {
-                    tokens.push(...beforeText.split(/(\s+)/).filter(t => t !== ''));
-                }
-            }
-            
-            // HTML etiketini ve içeriğini tek token olarak ekle
-            tokens.push(match[0]); // <strong>text</strong>
-            
-            lastIndex = match.index + match[0].length;
-        }
-        
-        // Kalan metni ekle
-        if (lastIndex < processedContent.length) {
-            const remainingText = processedContent.substring(lastIndex);
-            if (remainingText.trim()) {
-                tokens.push(...remainingText.split(/(\s+)/).filter(t => t !== ''));
-            }
-        }
-        
-        // Tek başına kalan HTML etiketlerini de bul (<br>, <strong></strong> gibi)
-        // Önce HTML etiketlerini placeholder'lara çevir
-        const tagPlaceholders = {};
-        let placeholderIndex = 0;
-        const standaloneTagRegex = /<[^>]+>/g;
-        
-        for (let i = 0; i < tokens.length; i++) {
-            // Tek başına HTML etiketi varsa (<br>, <strong></strong> gibi)
-            if (standaloneTagRegex.test(tokens[i]) && !tokens[i].includes('</')) {
-                // Eğer bu token zaten bir HTML etiketi içeriyorsa (önceki regex ile yakalanmamışsa)
-                const tagMatch = tokens[i].match(/<[^>]+>/);
-                if (tagMatch && !tokens[i].includes('</')) {
-                    const placeholder = `__HTMLTAG_${placeholderIndex}__`;
-                    tagPlaceholders[placeholder] = tokens[i];
-                    tokens[i] = placeholder;
-                    placeholderIndex++;
-                }
-            }
-        }
-        
-        let currentIndex = 0;
-        
-        // Streaming fonksiyonu - smooth fade-in efekti ile
-        const streamWord = () => {
-            if (currentIndex < tokens.length) {
-                // Token'ı al
-                let token = tokens[currentIndex];
-                let isPlaceholder = false;
-                let isHtmlTag = false;
-                
-                // Placeholder kontrolü - tam eşleşme varsa token'ı değiştir
-                for (const [placeholder, tag] of Object.entries(tagPlaceholders)) {
-                    if (token === placeholder) {
-                        token = tag;
-                        isPlaceholder = true;
-                        isHtmlTag = true;
-                        break;
-                    } else if (token.includes(placeholder)) {
-                        token = token.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), tag);
-                        isHtmlTag = true;
-                    }
-                }
-                
-                // HTML etiketi kontrolü (tam etiket: <strong>text</strong> veya tek etiket: <br>)
-                if (!isHtmlTag && token.trim().startsWith('<')) {
-                    isHtmlTag = true;
-                }
-                
-                // HTML etiketi kontrolü
-                if (isPlaceholder || isHtmlTag) {
-                    // HTML etiketi - parse et ve ekle
-                    if (token.trim() === '<br>' || token.trim() === '<br/>' || token.trim() === '<br />') {
-                        // <br> etiketi - line break ekle
-                        bubbleElement.appendChild(document.createElement('br'));
-                        message.content += '<br>';
-                    } else if (token.trim().match(/<(\w+)[^>]*>.*?<\/\1>/)) {
-                        // Tam HTML etiketi (örn: <strong>text</strong>) - parse et ve içindeki metni animasyonlu ekle
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = token;
-                        
-                        // HTML elemanını al (örn: <strong>)
-                        const htmlElement = tempDiv.firstElementChild;
-                        if (htmlElement) {
-                            // İçindeki metni al
-                            const innerText = htmlElement.textContent;
-                            // HTML elemanını klonla
-                            const clonedElement = htmlElement.cloneNode(false); // Sadece elemanı klonla, içeriği değil
-                            
-                            // İçindeki metni kelime kelime ayır ve animasyonlu ekle
-                            if (innerText.trim()) {
-                                const words = innerText.split(/(\s+)/).filter(w => w !== '');
-                                words.forEach(word => {
-                                    if (word.trim().length === 0) {
-                                        // Boşluk
-                                        clonedElement.appendChild(document.createTextNode(word));
-                                    } else {
-                                        // Kelime - span ile sar ve animasyon ekle
-                                        const wordSpan = document.createElement('span');
-                                        wordSpan.className = 'streaming-word';
-                                        wordSpan.textContent = word;
-                                        clonedElement.appendChild(wordSpan);
-                                        
-                                        // Animasyonu tetikle
-                                        requestAnimationFrame(() => {
-                                            wordSpan.style.opacity = '0';
-                                            wordSpan.style.transform = 'translateX(-5px)';
-                                            requestAnimationFrame(() => {
-                                                wordSpan.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-                                                wordSpan.style.opacity = '1';
-                                                wordSpan.style.transform = 'translateX(0)';
-                                            });
-                                        });
-                                    }
-                                });
-                            }
-                            
-                            // Elemanı bubble'a ekle
-                            bubbleElement.appendChild(clonedElement);
-                        } else {
-                            // Parse edilemediyse direkt innerHTML ile ekle
-                            const tempDiv2 = document.createElement('div');
-                            tempDiv2.innerHTML = token;
-                            while (tempDiv2.firstChild) {
-                                bubbleElement.appendChild(tempDiv2.firstChild);
-                            }
-                        }
-                        message.content += token;
-                    } else {
-                        // Diğer HTML etiketleri - innerHTML ile parse et
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = token;
-                        while (tempDiv.firstChild) {
-                            bubbleElement.appendChild(tempDiv.firstChild);
-                        }
-                        message.content += token;
-                    }
-                } else if (token.trim().length === 0) {
-                    // Boşluk - text node olarak ekle
-                    bubbleElement.appendChild(document.createTextNode(token));
-                    message.content += token;
-                } else {
-                    // Kelime - span ile sar ve animasyon ekle
-                    const wordSpan = document.createElement('span');
-                    wordSpan.className = 'streaming-word';
-                    wordSpan.textContent = token;
-                    
-                    // Bubble'a direkt ekle
-                    bubbleElement.appendChild(wordSpan);
-                    
-                    // Animasyonu tetiklemek için requestAnimationFrame kullan
-                    requestAnimationFrame(() => {
-                        wordSpan.style.opacity = '0';
-                        wordSpan.style.transform = 'translateX(-5px)';
-                        // Animasyonu başlat
-                        requestAnimationFrame(() => {
-                            wordSpan.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-                            wordSpan.style.opacity = '1';
-                            wordSpan.style.transform = 'translateX(0)';
-                        });
-                    });
-                    
-                    // message.content'i güncelle (kayıt için)
-                    message.content += `<span class="streaming-word">${this.escapeHtml(token)}</span>`;
-                }
-                
-                // Scroll kontrolü ile scroll yap - sadece kullanıcı en alttayken
-                if (shouldAutoScroll && isNearBottom()) {
-                    this.scrollToBottom();
-                }
-                
-                currentIndex++;
-                
-                // Kelime hızı (msn cinsinden) - İKİ KAT HIZLI (yarıya indirilmiş)
-                // Kelimeler için 25ms (eski 50ms), boşluklar için 10ms (eski 20ms), HTML etiketleri için 5ms (eski 10ms)
-                let delay = 25;
-                if (token.trim().length === 0) {
-                    delay = 10; // Boşluk
-                } else if (token.trim().startsWith('<') || token.trim().startsWith('&')) {
-                    delay = 5; // HTML etiketi veya HTML entity
-                }
-                
-                setTimeout(streamWord, delay);
-            } else {
-                // Streaming tamamlandı
-                // Event listener'ı kaldır
-                this.chatMessages.removeEventListener('scroll', handleScroll);
-                
-                // Scroll timeout'u temizle
-                if (scrollTimeout) {
-                    clearTimeout(scrollTimeout);
-                }
-                
-                // Streaming tamamlandı - formatlama zaten streaming başlamadan önce yapıldı
-                // Sadece final içeriği kaydet
-                message.content = bubbleElement.innerHTML;
-                
-                // Son bir kez scroll yap - sadece kullanıcı en alttayken
-                if (!userScrolled || isNearBottom()) {
-                    this.scrollToBottom();
-                }
-                
-                setTimeout(() => {
-                    message.streaming = false;
-                    this.messages.push(message);
-                    this.saveMessages();
-                }, 100);
-            }
-        };
-        
-        // Streaming'i başlat
-        streamWord();
     }
     
     showTyping() {
@@ -943,6 +754,15 @@ class UmayChat {
             if (this.charts.weatherChart) {
                 this.charts.weatherChart.destroy();
             }
+            if (this.charts.apparentTemperatureChart) {
+                this.charts.apparentTemperatureChart.destroy();
+            }
+            if (this.charts.precipitationChart) {
+                this.charts.precipitationChart.destroy();
+            }
+            if (this.charts.windChart) {
+                this.charts.windChart.destroy();
+            }
             
             // Hava durumu ikonu
             const weatherIcon = this.getWeatherIcon(weatherData.weather_code);
@@ -959,68 +779,17 @@ class UmayChat {
                         <canvas id="weatherChart"></canvas>
                     </div>
                     <div class="weather-details">
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">🌡️</span>
-                                Hissedilen Min:
-                            </span>
-                            <span class="weather-value">${weatherData.apparent_temperature_min ? Math.round(weatherData.apparent_temperature_min) : 'N/A'}°C</span>
+                        <div class="weather-apparent-temp-chart-container">
+                            <div class="weather-chart-title">🌡️ Hissedilen Sıcaklık</div>
+                            <canvas id="apparentTemperatureChart"></canvas>
                         </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">🌡️</span>
-                                Hissedilen Ort:
-                            </span>
-                            <span class="weather-value">${weatherData.apparent_temperature_mean ? Math.round(weatherData.apparent_temperature_mean) : 'N/A'}°C</span>
+                        <div class="weather-apparent-temp-chart-container">
+                            <div class="weather-chart-title">🌧️ Yağış Miktarları</div>
+                            <canvas id="precipitationChart"></canvas>
                         </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">🌡️</span>
-                                Hissedilen Max:
-                            </span>
-                            <span class="weather-value">${weatherData.apparent_temperature_max ? Math.round(weatherData.apparent_temperature_max) : 'N/A'}°C</span>
-                        </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">🌧️</span>
-                                Yağmur:
-                            </span>
-                            <span class="weather-value">${weatherData.rain_sum || 'N/A'} mm</span>
-                        </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">⛈️</span>
-                                Sağanak:
-                            </span>
-                            <span class="weather-value">${weatherData.showers_sum || 'N/A'} mm</span>
-                        </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">❄️</span>
-                                Kar:
-                            </span>
-                            <span class="weather-value">${weatherData.snowfall_sum || 'N/A'} mm</span>
-                        </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">💧</span>
-                                Toplam Yağış:
-                            </span>
-                            <span class="weather-value">${weatherData.precipitation_sum || 'N/A'} mm</span>
-                        </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">💨</span>
-                                Rüzgar Max:
-                            </span>
-                            <span class="weather-value">${weatherData.wind_speed_max || 'N/A'} km/h</span>
-                        </div>
-                        <div class="weather-item">
-                            <span class="weather-label">
-                                <span class="weather-label-icon">🌪️</span>
-                                Rüzgar Böre:
-                            </span>
-                            <span class="weather-value">${weatherData.wind_gusts_max || 'N/A'} km/h</span>
+                        <div class="weather-apparent-temp-chart-container">
+                            <div class="weather-chart-title">💨 Rüzgar Hızları</div>
+                            <canvas id="windChart"></canvas>
                         </div>
                         <div class="weather-item">
                             <span class="weather-label">
@@ -1037,6 +806,9 @@ class UmayChat {
             // 24 saatlik grafik oluştur (örnek veri)
             setTimeout(() => {
                 this.createWeatherChart(weatherData);
+                this.createApparentTemperatureChart(weatherData);
+                this.createPrecipitationChart(weatherData);
+                this.createWindChart(weatherData);
             }, 100);
             
         } catch (error) {
@@ -1132,6 +904,295 @@ class UmayChat {
         });
     }
     
+    createApparentTemperatureChart(weatherData) {
+        const ctx = document.getElementById('apparentTemperatureChart');
+        if (!ctx) return;
+        
+        // Hissedilen sıcaklık değerlerini al
+        const minTemp = weatherData.apparent_temperature_min ? Math.round(weatherData.apparent_temperature_min) : 0;
+        const meanTemp = weatherData.apparent_temperature_mean ? Math.round(weatherData.apparent_temperature_mean) : 0;
+        const maxTemp = weatherData.apparent_temperature_max ? Math.round(weatherData.apparent_temperature_max) : 0;
+        
+        // Eski grafiği temizle
+        if (this.charts.apparentTemperatureChart) {
+            this.charts.apparentTemperatureChart.destroy();
+        }
+        
+        this.charts.apparentTemperatureChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Min', 'Ort', 'Max'],
+                datasets: [{
+                    label: 'Hissedilen Sıcaklık (°C)',
+                    data: [minTemp, meanTemp, maxTemp],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',  // Min - Mavi
+                        'rgba(16, 185, 129, 0.8)',   // Ort - Yeşil
+                        'rgba(245, 158, 11, 0.8)'    // Max - Turuncu
+                    ],
+                    borderColor: [
+                        '#3b82f6',  // Min - Mavi
+                        '#10b981',  // Ort - Yeşil
+                        '#f59e0b'   // Max - Turuncu
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Yatay çubuklar
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return ''; // Başlığı kaldır
+                            },
+                            label: function(context) {
+                                // Yatay çubuk grafiklerde değer x ekseninde
+                                return context.parsed.x + '°C';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 11 },
+                            callback: function(value) {
+                                return value + '°C';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 12, weight: '500' }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    createPrecipitationChart(weatherData) {
+        const ctx = document.getElementById('precipitationChart');
+        if (!ctx) return;
+        
+        // Yağış değerlerini al
+        const rainSum = weatherData.rain_sum != null ? weatherData.rain_sum : 0;
+        const showersSum = weatherData.showers_sum != null ? weatherData.showers_sum : 0;
+        const snowfallSum = weatherData.snowfall_sum != null ? weatherData.snowfall_sum : 0;
+        const precipitationSum = weatherData.precipitation_sum != null ? weatherData.precipitation_sum : 0;
+        
+        // Eski grafiği temizle
+        if (this.charts.precipitationChart) {
+            this.charts.precipitationChart.destroy();
+        }
+        
+        this.charts.precipitationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Yağmur', 'Sağanak', 'Kar', 'Toplam Yağış'],
+                datasets: [{
+                    label: 'Yağış Miktarı (mm)',
+                    data: [rainSum, showersSum, snowfallSum, precipitationSum],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',   // Yağmur - Mavi
+                        'rgba(139, 92, 246, 0.8)',   // Sağanak - Mor
+                        'rgba(147, 197, 253, 0.8)',  // Kar - Açık Mavi
+                        'rgba(16, 185, 129, 0.8)'    // Toplam - Yeşil
+                    ],
+                    borderColor: [
+                        '#3b82f6',   // Yağmur - Mavi
+                        '#8b5cf6',    // Sağanak - Mor
+                        '#93c5fd',   // Kar - Açık Mavi
+                        '#10b981'     // Toplam - Yeşil
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Yatay çubuklar
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 25,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return ''; // Başlığı kaldır
+                            },
+                            label: function(context) {
+                                return context.parsed.x + ' mm';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        position: 'bottom',
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 9 },
+                            maxRotation: 0,
+                            minRotation: 0,
+                            padding: 3,
+                            maxTicksLimit: 8,
+                            callback: function(value) {
+                                return value + ' mm';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 11, weight: '500' },
+                            padding: 8
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    createWindChart(weatherData) {
+        const ctx = document.getElementById('windChart');
+        if (!ctx) return;
+        
+        // Rüzgar değerlerini al
+        const windSpeedMax = weatherData.wind_speed_max || 0;
+        const windGustsMax = weatherData.wind_gusts_max || 0;
+        
+        // Eski grafiği temizle
+        if (this.charts.windChart) {
+            this.charts.windChart.destroy();
+        }
+        
+        this.charts.windChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Rüzgar Max', 'Rüzgar Böre'],
+                datasets: [{
+                    label: 'Rüzgar Hızı (km/h)',
+                    data: [windSpeedMax, windGustsMax],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',  // Rüzgar Max - Mavi
+                        'rgba(245, 158, 11, 0.8)'   // Rüzgar Böre - Turuncu
+                    ],
+                    borderColor: [
+                        '#3b82f6',  // Rüzgar Max - Mavi
+                        '#f59e0b'   // Rüzgar Böre - Turuncu
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Yatay çubuklar
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 25,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return ''; // Başlığı kaldır
+                            },
+                            label: function(context) {
+                                return context.parsed.x + ' km/h';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        position: 'bottom',
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 9 },
+                            maxRotation: 0,
+                            minRotation: 0,
+                            padding: 3,
+                            maxTicksLimit: 8,
+                            callback: function(value) {
+                                return value + ' km/h';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 11, weight: '500' },
+                            padding: 8
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
     async loadSoilData() {
         if (!this.soilBtn || !this.soilContent) return;
         
@@ -1173,7 +1234,25 @@ class UmayChat {
             let soilDetailsHTML = '';
             let hasClay = false, hasSilt = false, hasSand = false;
             
-            // Tüm özellikleri döngü ile ekle
+            // Grafikleri olan değerlerin listesi
+            const chartedKeys = [
+                'pH',
+                'Organic Carbon',
+                'Total Nitrogen',
+                'Bulk Density',
+                'Reference Bulk Density',
+                'Cation Exchange Capacity',
+                'Clay CEC',
+                'Effective CEC',
+                'Base Saturation',
+                'Aluminum Saturation',
+                'Exchangeable Sodium Percentage',
+                'Clay',
+                'Silt',
+                'Sand'
+            ];
+            
+            // Tüm özellikleri döngü ile ekle (grafikleri olanlar hariç)
             for (const [key, value] of Object.entries(soilData)) {
                 if (key !== 'soil_type' && key !== 'soil_code' && key !== 'description' && value !== 'N/A' && value !== null) {
                     // Kil, silt, kum kontrolü (sadece Toprak Bileşimi grafiği için)
@@ -1181,28 +1260,19 @@ class UmayChat {
                     if (key === 'Silt') hasSilt = true;
                     if (key === 'Sand') hasSand = true;
                     
+                    // Grafikleri olan değerleri atla
+                    if (chartedKeys.includes(key)) {
+                        continue;
+                    }
+                    
                     // Label'ı Türkçe'ye çevir
                     let label = key;
                     const labelMap = {
-                        'pH': 'pH',
-                        'Organic Carbon': 'Organik Madde',
-                        'Total Nitrogen': 'Toplam Azot',
                         'C/N Ratio': 'C/N Oranı',
-                        'Clay': 'Kil',
-                        'Silt': 'Silt',
-                        'Sand': 'Kum',
                         'Coarse Fragments': 'Kaba Parçacıklar',
-                        'Bulk Density': 'Yoğunluk',
-                        'Reference Bulk Density': 'Referans Yoğunluk',
                         'Root Depth': 'Kök Derinliği',
                         'Available Water Capacity': 'Su Kapasitesi',
-                        'Cation Exchange Capacity': 'Katyon Değişim Kapasitesi',
-                        'Clay CEC': 'Kil CEC',
-                        'Effective CEC': 'Etkili CEC',
                         'Total Exchangeable Bases': 'Toplam Değişebilir Bazlar',
-                        'Base Saturation': 'Baz Doygunluğu',
-                        'Exchangeable Sodium Percentage': 'Değişebilir Sodyum Yüzdesi',
-                        'Aluminum Saturation': 'Alüminyum Doygunluğu',
                         'Electrical Conductivity': 'Elektriksel İletkenlik',
                         'Total Carbon Equivalent': 'Toplam Karbon Eşdeğeri',
                         'Gypsum Content': 'Jips İçeriği'
@@ -1219,8 +1289,74 @@ class UmayChat {
                 }
             }
             
-            // Grafikler için HTML - Sadece Toprak Bileşimi
+            // Grafikler için HTML
             let chartsHTML = '';
+            
+            // pH Gauge
+            if (soilData.pH != null && soilData.pH !== 'N/A') {
+                chartsHTML += `
+                    <div class="soil-chart-item">
+                        <div class="soil-chart-title">pH Değeri</div>
+                        <div class="soil-chart-canvas">
+                            <canvas id="soilPHGauge"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Organik Madde ve Toplam Azot
+            if ((soilData['Organic Carbon'] != null && soilData['Organic Carbon'] !== 'N/A') || 
+                (soilData['Total Nitrogen'] != null && soilData['Total Nitrogen'] !== 'N/A')) {
+                chartsHTML += `
+                    <div class="soil-chart-item">
+                        <div class="soil-chart-title">Organik Madde ve Toplam Azot</div>
+                        <div class="soil-chart-canvas">
+                            <canvas id="soilOrganicChart"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Yoğunluk karşılaştırması
+            if ((soilData['Bulk Density'] != null && soilData['Bulk Density'] !== 'N/A') || 
+                (soilData['Reference Bulk Density'] != null && soilData['Reference Bulk Density'] !== 'N/A')) {
+                chartsHTML += `
+                    <div class="soil-chart-item">
+                        <div class="soil-chart-title">Yoğunluk Karşılaştırması</div>
+                        <div class="soil-chart-canvas">
+                            <canvas id="soilDensityChart"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Katyon Değişim Kapasitesi
+            if ((soilData['Cation Exchange Capacity'] != null && soilData['Cation Exchange Capacity'] !== 'N/A') ||
+                (soilData['Clay CEC'] != null && soilData['Clay CEC'] !== 'N/A') ||
+                (soilData['Effective CEC'] != null && soilData['Effective CEC'] !== 'N/A')) {
+                chartsHTML += `
+                    <div class="soil-chart-item">
+                        <div class="soil-chart-title">Katyon Değişim Kapasitesi</div>
+                        <div class="soil-chart-canvas">
+                            <canvas id="soilCECChart"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Doygunluk değerleri
+            if ((soilData['Base Saturation'] != null && soilData['Base Saturation'] !== 'N/A') ||
+                (soilData['Aluminum Saturation'] != null && soilData['Aluminum Saturation'] !== 'N/A') ||
+                (soilData['Exchangeable Sodium Percentage'] != null && soilData['Exchangeable Sodium Percentage'] !== 'N/A')) {
+                chartsHTML += `
+                    <div class="soil-chart-item">
+                        <div class="soil-chart-title">Doygunluk Değerleri</div>
+                        <div class="soil-chart-canvas">
+                            <canvas id="soilSaturationChart"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
             
             // Kil/Silt/Kum Pie Chart (Toprak Bileşimi)
             if (hasClay && hasSilt && hasSand) {
@@ -1248,8 +1384,51 @@ class UmayChat {
                 </div>
             `;
             
-            // Grafikleri oluştur - Sadece Toprak Bileşimi
+            // Grafikleri oluştur
             setTimeout(() => {
+                // pH Gauge
+                if (soilData.pH != null && soilData.pH !== 'N/A') {
+                    const pHValue = parseFloat(soilData.pH.toString().replace(' pH units', '').replace(' pH', '')) || 0;
+                    this.createPHGauge(pHValue);
+                }
+                
+                // Organik Madde ve Toplam Azot
+                if ((soilData['Organic Carbon'] != null && soilData['Organic Carbon'] !== 'N/A') || 
+                    (soilData['Total Nitrogen'] != null && soilData['Total Nitrogen'] !== 'N/A')) {
+                    const organicCarbon = parseFloat(soilData['Organic Carbon']?.toString().replace('%', '') || '0');
+                    const totalNitrogen = parseFloat(soilData['Total Nitrogen']?.toString().replace('%', '') || '0');
+                    this.createSoilOrganicChart(organicCarbon, totalNitrogen);
+                }
+                
+                // Yoğunluk karşılaştırması
+                if ((soilData['Bulk Density'] != null && soilData['Bulk Density'] !== 'N/A') || 
+                    (soilData['Reference Bulk Density'] != null && soilData['Reference Bulk Density'] !== 'N/A')) {
+                    const bulkDensity = parseFloat(soilData['Bulk Density']?.toString().replace(' g/cm³', '') || '0');
+                    const refBulkDensity = parseFloat(soilData['Reference Bulk Density']?.toString().replace(' g/cm³', '') || '0');
+                    this.createSoilDensityChart(bulkDensity, refBulkDensity);
+                }
+                
+                // Katyon Değişim Kapasitesi
+                if ((soilData['Cation Exchange Capacity'] != null && soilData['Cation Exchange Capacity'] !== 'N/A') ||
+                    (soilData['Clay CEC'] != null && soilData['Clay CEC'] !== 'N/A') ||
+                    (soilData['Effective CEC'] != null && soilData['Effective CEC'] !== 'N/A')) {
+                    const cec = parseFloat(soilData['Cation Exchange Capacity']?.toString().replace(' cmol/kg', '') || '0');
+                    const clayCEC = parseFloat(soilData['Clay CEC']?.toString().replace(' cmol/kg', '') || '0');
+                    const effectiveCEC = parseFloat(soilData['Effective CEC']?.toString().replace(' cmol/kg', '') || '0');
+                    this.createSoilCECChart(cec, clayCEC, effectiveCEC);
+                }
+                
+                // Doygunluk değerleri
+                if ((soilData['Base Saturation'] != null && soilData['Base Saturation'] !== 'N/A') ||
+                    (soilData['Aluminum Saturation'] != null && soilData['Aluminum Saturation'] !== 'N/A') ||
+                    (soilData['Exchangeable Sodium Percentage'] != null && soilData['Exchangeable Sodium Percentage'] !== 'N/A')) {
+                    const baseSat = parseFloat(soilData['Base Saturation']?.toString().replace('%', '') || '0');
+                    const aluminumSat = parseFloat(soilData['Aluminum Saturation']?.toString().replace('%', '') || '0');
+                    const sodiumPct = parseFloat(soilData['Exchangeable Sodium Percentage']?.toString().replace('%', '') || '0');
+                    this.createSoilSaturationChart(baseSat, aluminumSat, sodiumPct);
+                }
+                
+                // Toprak Bileşimi
                 if (hasClay && hasSilt && hasSand) {
                     this.createSoilCompositionChart(
                         parseFloat(soilData['Clay']) || 0,
@@ -1281,54 +1460,124 @@ class UmayChat {
         const canvas = document.getElementById('soilPHGauge');
         if (!canvas) return;
         
-        const ctx = canvas.getContext('2d');
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = 60;
-        
-        // pH değerine göre renk (0-14 arası)
-        const normalizedValue = Math.max(0, Math.min(14, pHValue)) / 14;
-        const angle = Math.PI * normalizedValue; // 0-180 derece
-        
-        // Renk gradyanı (asit: kırmızı, nötr: yeşil, baz: mavi)
-        let color;
-        if (pHValue < 7) {
-            color = `rgba(${255}, ${Math.round(255 * (pHValue / 7))}, 0, 0.8)`;
-        } else if (pHValue === 7) {
-            color = '#10b981';
-        } else {
-            color = `rgba(0, ${Math.round(255 * ((14 - pHValue) / 7))}, 255, 0.8)`;
+        // Canvas boyutunu ayarla
+        const container = canvas.parentElement;
+        if (container) {
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight || 120;
         }
         
-        // Arka plan yay
-        ctx.beginPath();
-        ctx.arc(centerX, centerY + 20, radius, Math.PI, 0, false);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 15;
-        ctx.stroke();
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
         
-        // Değer yayı
-        ctx.beginPath();
-        ctx.arc(centerX, centerY + 20, radius, Math.PI, Math.PI - angle, false);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 15;
-        ctx.lineCap = 'round';
-        ctx.stroke();
+        // pH değerini 0-14 arasına sınırla
+        const clampedPH = Math.max(0, Math.min(14, pHValue));
         
-        // İşaretler
+        // pH durumunu belirle
+        let pHStatus = '';
+        let statusColor = '#EAEAEA';
+        if (clampedPH < 4.5) {
+            pHStatus = 'Çok Asidik';
+            statusColor = '#ef4444';
+        } else if (clampedPH < 5.5) {
+            pHStatus = 'Asidik';
+            statusColor = '#f97316';
+        } else if (clampedPH < 6.5) {
+            pHStatus = 'Hafif Asidik';
+            statusColor = '#fbbf24';
+        } else if (clampedPH < 7.5) {
+            pHStatus = 'Nötr';
+            statusColor = '#10b981';
+        } else if (clampedPH < 8.5) {
+            pHStatus = 'Hafif Bazik';
+            statusColor = '#3b82f6';
+        } else if (clampedPH < 9.5) {
+            pHStatus = 'Bazik';
+            statusColor = '#6366f1';
+        } else {
+            pHStatus = 'Çok Bazik';
+            statusColor = '#8b5cf6';
+        }
+        
+        // pH cetveli parametreleri
+        const scaleHeight = 30;
+        const scaleY = height / 2 - scaleHeight / 2;
+        const scaleWidth = width - 40;
+        const scaleX = 20;
+        const stepWidth = scaleWidth / 14;
+        
+        // pH cetveli gradyanı çiz (14 segment: 0-1, 1-2, ..., 13-14)
+        for (let i = 0; i < 14; i++) {
+            const x = scaleX + (i * stepWidth);
+            let r, g, b;
+            
+            // pH değerine göre renk (0: kırmızı, 7: yeşil, 14: mor)
+            // Her segment için orta noktasını kullan
+            const segmentValue = i + 0.5;
+            
+            if (segmentValue < 7) {
+                // Asidik: kırmızıdan sarıya
+                r = 255;
+                g = Math.round(255 * (segmentValue / 7));
+                b = 0;
+            } else if (segmentValue === 7) {
+                // Nötr: yeşil
+                r = 16;
+                g = 185;
+                b = 129;
+            } else {
+                // Bazik: maviden mora
+                r = Math.round(255 * ((14 - segmentValue) / 7));
+                g = Math.round(255 * ((14 - segmentValue) / 7));
+                b = 255;
+            }
+            
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.fillRect(x, scaleY, stepWidth, scaleHeight);
+        }
+        
+        // pH cetveli çerçevesi
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.lineWidth = 2;
-        for (let i = 0; i <= 14; i++) {
-            const markAngle = Math.PI - (Math.PI * i / 14);
-            const x1 = centerX + Math.cos(markAngle) * (radius - 10);
-            const y1 = centerY + 20 + Math.sin(markAngle) * (radius - 10);
-            const x2 = centerX + Math.cos(markAngle) * (radius + 5);
-            const y2 = centerY + 20 + Math.sin(markAngle) * (radius + 5);
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
-        }
+        ctx.strokeRect(scaleX, scaleY, scaleWidth, scaleHeight);
+        
+        // pH değerinin konumunu göster
+        const pHX = scaleX + (clampedPH * stepWidth);
+        ctx.strokeStyle = '#EAEAEA';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pHX, scaleY - 5);
+        ctx.lineTo(pHX, scaleY + scaleHeight + 5);
+        ctx.stroke();
+        
+        // pH değerini göster (üstte)
+        ctx.fillStyle = '#EAEAEA';
+        ctx.font = 'bold 20px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(clampedPH.toFixed(1), pHX, scaleY - 20);
+        
+        // pH durumunu göster (altta)
+        ctx.fillStyle = statusColor;
+        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.fillText(pHStatus, pHX, scaleY + scaleHeight + 25);
+        
+        // pH cetveli işaretleri (0, 7, 14)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        
+        // 0 işareti
+        ctx.fillText('0', scaleX, scaleY + scaleHeight + 5);
+        
+        // 7 işareti (nötr)
+        const neutralX = scaleX + (7 * stepWidth);
+        ctx.fillText('7', neutralX, scaleY + scaleHeight + 5);
+        
+        // 14 işareti
+        ctx.fillText('14', scaleX + scaleWidth, scaleY + scaleHeight + 5);
     }
     
     createSoilCompositionChart(clay, silt, sand) {
@@ -1413,26 +1662,331 @@ class UmayChat {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                indexAxis: 'y',
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 15,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return '';
+                            },
+                            label: function(context) {
+                                return context.parsed.x + ' g/cm³';
+                            }
+                        }
                     }
                 },
                 scales: {
-                    y: {
+                    x: {
                         beginAtZero: true,
                         ticks: {
                             color: '#A0A0A0',
-                            font: { size: 10 }
+                            font: { size: 10 },
+                            maxRotation: 0,
+                            minRotation: 0,
+                            padding: 3,
+                            callback: function(value) {
+                                return value + ' g/cm³';
+                            }
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
                         }
                     },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 11, weight: '500' },
+                            padding: 8
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    createSoilOrganicChart(organicCarbon, totalNitrogen) {
+        const ctx = document.getElementById('soilOrganicChart');
+        if (!ctx) return;
+        
+        if (this.charts.soilOrganicChart) {
+            this.charts.soilOrganicChart.destroy();
+        }
+        
+        this.charts.soilOrganicChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Organik Madde', 'Toplam Azot'],
+                datasets: [{
+                    label: 'Değer (%)',
+                    data: [organicCarbon, totalNitrogen],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)'
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#3b82f6'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 15,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return '';
+                            },
+                            label: function(context) {
+                                return context.parsed.x + ' %';
+                            }
+                        }
+                    }
+                },
+                scales: {
                     x: {
+                        beginAtZero: true,
                         ticks: {
                             color: '#A0A0A0',
-                            font: { size: 10 }
+                            font: { size: 10 },
+                            maxRotation: 0,
+                            minRotation: 0,
+                            padding: 3,
+                            callback: function(value) {
+                                return value + ' %';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 11, weight: '500' },
+                            padding: 8
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    createSoilCECChart(cec, clayCEC, effectiveCEC) {
+        const ctx = document.getElementById('soilCECChart');
+        if (!ctx) return;
+        
+        if (this.charts.soilCECChart) {
+            this.charts.soilCECChart.destroy();
+        }
+        
+        this.charts.soilCECChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['CEC', 'Kil CEC', 'Etkili CEC'],
+                datasets: [{
+                    label: 'Katyon Değişim Kapasitesi (cmol/kg)',
+                    data: [cec, clayCEC, effectiveCEC],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#3b82f6',
+                        '#f59e0b'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 20,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return '';
+                            },
+                            label: function(context) {
+                                return context.parsed.x + ' cmol/kg';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 9 },
+                            maxRotation: 0,
+                            minRotation: 0,
+                            padding: 3,
+                            callback: function(value) {
+                                return value + ' cmol/kg';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 11, weight: '500' },
+                            padding: 8
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    createSoilSaturationChart(baseSat, aluminumSat, sodiumPct) {
+        const ctx = document.getElementById('soilSaturationChart');
+        if (!ctx) return;
+        
+        if (this.charts.soilSaturationChart) {
+            this.charts.soilSaturationChart.destroy();
+        }
+        
+        this.charts.soilSaturationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Baz Doygunluğu', 'Alüminyum Doygunluğu', 'Değişebilir Sodyum Yüzdesi'],
+                datasets: [{
+                    label: 'Doygunluk (%)',
+                    data: [baseSat, aluminumSat, sodiumPct],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(59, 130, 246, 0.8)'
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#f59e0b',
+                        '#3b82f6'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 15,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function() {
+                                return '';
+                            },
+                            label: function(context) {
+                                return context.parsed.x + ' %';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            color: '#A0A0A0',
+                            font: { size: 9 },
+                            maxRotation: 0,
+                            minRotation: 0,
+                            padding: 3,
+                            callback: function(value) {
+                                return value + ' %';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#EAEAEA',
+                            font: { size: 10, weight: '500' },
+                            padding: 8
                         },
                         grid: {
                             display: false
