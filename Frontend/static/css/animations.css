@@ -1,0 +1,71 @@
+/* Animasyonlar - @keyframes tanımlamaları */
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(clamp(-1rem, -2vh, -1.25rem));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(clamp(-0.5rem, -1vh, -0.625rem)); }
+}
+
+@keyframes weatherPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes progressFill {
+    from { width: 0; }
+}
+
+@keyframes typingPulse {
+    0%, 60%, 100% { 
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    30% { 
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(clamp(1.5rem, 4vh, 1.875rem));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(clamp(-1rem, -2.5vw, -1.25rem));
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes messageSlide {
+    from {
+        opacity: 0;
+        transform: translateY(clamp(0.5rem, 1.2vh, 0.625rem));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
