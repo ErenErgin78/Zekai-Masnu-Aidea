@@ -21,6 +21,93 @@ class UmayChat {
         this.applyTheme();
         this.loadMessages();
         this.setupTyping();
+        // Auth durumunu kontrol et ve panelleri kilitle/aç
+        this.checkPanelLock();
+    }
+    
+    checkPanelLock() {
+        // isUserLoggedIn fonksiyonunu api.js'den import et
+        if (typeof isUserLoggedIn === 'function') {
+            if (!isUserLoggedIn()) {
+                // Giriş yapılmamış, panelleri kilitle
+                this.lockPanels();
+            } else {
+                // Giriş yapılmış, panelleri aç
+                this.unlockPanels();
+            }
+        }
+    }
+    
+    lockPanels() {
+        const weatherPanel = document.querySelector('.weather-panel');
+        const soilPanel = document.querySelector('.soil-panel');
+        
+        // Panellere kilit overlay'i ekle (eğer yoksa)
+        if (weatherPanel && !weatherPanel.querySelector('.panel-lock-overlay')) {
+            const weatherOverlay = document.createElement('div');
+            weatherOverlay.className = 'panel-lock-overlay';
+            weatherOverlay.innerHTML = `
+                <div class="lock-content">
+                    <i class="fas fa-lock"></i>
+                    <p>Giriş yapın</p>
+                    <a href="login.html" class="lock-login-btn">Giriş Yap</a>
+                </div>
+            `;
+            weatherPanel.appendChild(weatherOverlay);
+            weatherPanel.classList.add('locked');
+        }
+        
+        if (soilPanel && !soilPanel.querySelector('.panel-lock-overlay')) {
+            const soilOverlay = document.createElement('div');
+            soilOverlay.className = 'panel-lock-overlay';
+            soilOverlay.innerHTML = `
+                <div class="lock-content">
+                    <i class="fas fa-lock"></i>
+                    <p>Giriş yapın</p>
+                    <a href="login.html" class="lock-login-btn">Giriş Yap</a>
+                </div>
+            `;
+            soilPanel.appendChild(soilOverlay);
+            soilPanel.classList.add('locked');
+        }
+        
+        // Butonları devre dışı bırak
+        if (this.weatherBtn) {
+            this.weatherBtn.disabled = true;
+            this.weatherBtn.style.pointerEvents = 'none';
+        }
+        if (this.soilBtn) {
+            this.soilBtn.disabled = true;
+            this.soilBtn.style.pointerEvents = 'none';
+        }
+    }
+    
+    unlockPanels() {
+        const weatherPanel = document.querySelector('.weather-panel');
+        const soilPanel = document.querySelector('.soil-panel');
+        
+        // Kilit overlay'lerini kaldır
+        const weatherOverlay = weatherPanel?.querySelector('.panel-lock-overlay');
+        const soilOverlay = soilPanel?.querySelector('.panel-lock-overlay');
+        
+        if (weatherOverlay) {
+            weatherOverlay.remove();
+            weatherPanel.classList.remove('locked');
+        }
+        if (soilOverlay) {
+            soilOverlay.remove();
+            soilPanel.classList.remove('locked');
+        }
+        
+        // Butonları aktif et
+        if (this.weatherBtn) {
+            this.weatherBtn.disabled = false;
+            this.weatherBtn.style.pointerEvents = 'auto';
+        }
+        if (this.soilBtn) {
+            this.soilBtn.disabled = false;
+            this.soilBtn.style.pointerEvents = 'auto';
+        }
     }
     
     setupElements() {

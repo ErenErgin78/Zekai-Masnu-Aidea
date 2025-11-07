@@ -157,6 +157,8 @@
                         if (authButtons) authButtons.style.display = 'none';
                         if (userInfo) userInfo.style.display = 'flex';
                         if (userName) userName.textContent = `👤 ${user.username}`;
+                        // Panelleri aç
+                        unlockPanels();
                     }
                 } catch (error) {
                     console.error('Kullanıcı bilgisi alınamadı:', error);
@@ -164,11 +166,15 @@
                     if (authButtons) authButtons.style.display = 'flex';
                     if (userInfo) userInfo.style.display = 'none';
                     logoutUser(); // Geçersiz token'ı temizle
+                    // Panelleri kilitle
+                    lockPanels();
                 }
             } else {
                 // Giriş yapılmamış, login/register butonlarını göster
                 if (authButtons) authButtons.style.display = 'flex';
                 if (userInfo) userInfo.style.display = 'none';
+                // Panelleri kilitle
+                lockPanels();
             }
             
             // Çıkış butonu event listener (sadece bir kez ekle)
@@ -180,6 +186,84 @@
                     window.location.reload();
                 });
                 logoutHandlerAttached = true;
+            }
+        }
+        
+        // Panelleri kilitle (giriş yapılmamışsa)
+        function lockPanels() {
+            const weatherPanel = document.querySelector('.weather-panel');
+            const soilPanel = document.querySelector('.soil-panel');
+            const weatherBtn = document.getElementById('weatherBtn');
+            const soilBtn = document.getElementById('soilBtn');
+            
+            // Panellere kilit overlay'i ekle
+            if (weatherPanel && !weatherPanel.querySelector('.panel-lock-overlay')) {
+                const weatherOverlay = document.createElement('div');
+                weatherOverlay.className = 'panel-lock-overlay';
+                weatherOverlay.innerHTML = `
+                    <div class="lock-content">
+                        <i class="fas fa-lock"></i>
+                        <p>Giriş yapın</p>
+                        <a href="login.html" class="lock-login-btn">Giriş Yap</a>
+                    </div>
+                `;
+                weatherPanel.appendChild(weatherOverlay);
+                weatherPanel.classList.add('locked');
+            }
+            
+            if (soilPanel && !soilPanel.querySelector('.panel-lock-overlay')) {
+                const soilOverlay = document.createElement('div');
+                soilOverlay.className = 'panel-lock-overlay';
+                soilOverlay.innerHTML = `
+                    <div class="lock-content">
+                        <i class="fas fa-lock"></i>
+                        <p>Giriş yapın</p>
+                        <a href="login.html" class="lock-login-btn">Giriş Yap</a>
+                    </div>
+                `;
+                soilPanel.appendChild(soilOverlay);
+                soilPanel.classList.add('locked');
+            }
+            
+            // Butonları devre dışı bırak
+            if (weatherBtn) {
+                weatherBtn.disabled = true;
+                weatherBtn.style.pointerEvents = 'none';
+            }
+            if (soilBtn) {
+                soilBtn.disabled = true;
+                soilBtn.style.pointerEvents = 'none';
+            }
+        }
+        
+        // Panelleri aç (giriş yapıldıysa)
+        function unlockPanels() {
+            const weatherPanel = document.querySelector('.weather-panel');
+            const soilPanel = document.querySelector('.soil-panel');
+            const weatherBtn = document.getElementById('weatherBtn');
+            const soilBtn = document.getElementById('soilBtn');
+            
+            // Kilit overlay'lerini kaldır
+            const weatherOverlay = weatherPanel?.querySelector('.panel-lock-overlay');
+            const soilOverlay = soilPanel?.querySelector('.panel-lock-overlay');
+            
+            if (weatherOverlay) {
+                weatherOverlay.remove();
+                weatherPanel.classList.remove('locked');
+            }
+            if (soilOverlay) {
+                soilOverlay.remove();
+                soilPanel.classList.remove('locked');
+            }
+            
+            // Butonları aktif et
+            if (weatherBtn) {
+                weatherBtn.disabled = false;
+                weatherBtn.style.pointerEvents = 'auto';
+            }
+            if (soilBtn) {
+                soilBtn.disabled = false;
+                soilBtn.style.pointerEvents = 'auto';
             }
         }
         

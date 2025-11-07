@@ -9,13 +9,54 @@ function createWeatherChart(umayChatInstance, weatherData) {
     const ctx = document.getElementById('weatherChart');
     if (!ctx) return;
     
-    // Örnek 24 saatlik veri (gerçek uygulamada API'den gelecek)
+    // 24 saatlik veri oluştur (günlük verilerden interpolasyon)
     const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
-    const temperatures = Array.from({length: 24}, () => {
-        const base = weatherData.temperature || 20;
-        return Math.round(base + (Math.random() * 10 - 5));
+    
+    // Sıcaklık verileri - günlük ortalama sıcaklıktan interpolasyon
+    const baseTemp = weatherData.temperature || 20;
+    const minTemp = weatherData.apparent_temperature_min || baseTemp - 5;
+    const maxTemp = weatherData.apparent_temperature_max || baseTemp + 5;
+    
+    // Gün içi sıcaklık dağılımı (sabah düşük, öğlen yüksek, akşam düşük)
+    const temperatures = hours.map((_, i) => {
+        const hour = i;
+        let temp;
+        if (hour >= 6 && hour <= 14) {
+            // Sabah 6'dan öğlen 14'e kadar artış
+            const progress = (hour - 6) / 8;
+            temp = minTemp + (maxTemp - minTemp) * progress;
+        } else if (hour > 14 && hour <= 20) {
+            // Öğleden sonra 14'ten akşam 20'ye kadar düşüş
+            const progress = (hour - 14) / 6;
+            temp = maxTemp - (maxTemp - minTemp) * progress * 0.7;
+        } else {
+            // Gece ve sabah erken saatler
+            temp = minTemp + (baseTemp - minTemp) * 0.3;
+        }
+        return Math.round(temp);
     });
-    const precipitation = Array.from({length: 24}, () => Math.random() * 5);
+    
+    // Yağış verileri - günlük toplam yağıştan interpolasyon
+    const totalPrecipitation = weatherData.precipitation_sum || 0;
+    
+    // Eğer toplam yağış 0 ise, tüm saatlerde 0 göster
+    // Eğer toplam yağış varsa, bunu 24 saate gerçekçi bir şekilde dağıt
+    const precipitation = hours.map((_, i) => {
+        const hour = i;
+        if (totalPrecipitation === 0) return 0;
+        
+        // Yağış genellikle sabah (6-9) ve akşam (18-21) saatlerinde daha fazla olur
+        // Dağılım oranları (toplam ~%100 olacak şekilde ayarlanmış)
+        let distribution = 0.025; // Varsayılan dağılım (%2.5)
+        if ((hour >= 6 && hour <= 9) || (hour >= 18 && hour <= 21)) {
+            distribution = 0.06; // Sabah ve akşam saatlerinde daha fazla (%6)
+        } else if (hour >= 12 && hour <= 15) {
+            distribution = 0.015; // Öğlen saatlerinde daha az (%1.5)
+        }
+        
+        // Toplam yağışı dağılım oranına göre hesapla
+        return Math.max(0, totalPrecipitation * distribution);
+    });
     
     if (umayChatInstance.charts.weatherChart) {
         umayChatInstance.charts.weatherChart.destroy();
@@ -33,14 +74,6 @@ function createWeatherChart(umayChatInstance, weatherData) {
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     tension: 0.4,
                     fill: true
-                },
-                {
-                    label: 'Yağış (mm)',
-                    data: precipitation.filter((_, i) => i % 3 === 0),
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4,
-                    yAxisID: 'y1'
                 }
             ]
         },
@@ -61,15 +94,104 @@ function createWeatherChart(umayChatInstance, weatherData) {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' }
                 },
                 y: {
+                    ticks: { 
+                        color: '#A0A0A0', 
+                        font: { size: 9 },
+                        callback: function(value) {
+                            return value + '°C';
+                        }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                }
+            },
+            animation: {
+                duration: 1500,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+}
+
+/**
+ * Yağış çizgi grafiğini oluşturur (24 saatlik)
+ * @param {Object} umayChatInstance - UmayChat instance'ı
+ * @param {Object} weatherData - Hava durumu verileri
+ */
+function createPrecipitationLineChart(umayChatInstance, weatherData) {
+    const ctx = document.getElementById('precipitationLineChart');
+    if (!ctx) return;
+    
+    // 24 saatlik veri oluştur (günlük verilerden interpolasyon)
+    const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+    
+    // Yağış verileri - günlük toplam yağıştan interpolasyon
+    const totalPrecipitation = weatherData.precipitation_sum || 0;
+    
+    // Eğer toplam yağış 0 ise, tüm saatlerde 0 göster
+    // Eğer toplam yağış varsa, bunu 24 saate gerçekçi bir şekilde dağıt
+    const precipitation = hours.map((_, i) => {
+        const hour = i;
+        if (totalPrecipitation === 0) return 0;
+        
+        // Yağış genellikle sabah (6-9) ve akşam (18-21) saatlerinde daha fazla olur
+        // Dağılım oranları (toplam ~%100 olacak şekilde ayarlanmış)
+        let distribution = 0.025; // Varsayılan dağılım (%2.5)
+        if ((hour >= 6 && hour <= 9) || (hour >= 18 && hour <= 21)) {
+            distribution = 0.06; // Sabah ve akşam saatlerinde daha fazla (%6)
+        } else if (hour >= 12 && hour <= 15) {
+            distribution = 0.015; // Öğlen saatlerinde daha az (%1.5)
+        }
+        
+        // Toplam yağışı dağılım oranına göre hesapla
+        return Math.max(0, totalPrecipitation * distribution);
+    });
+    
+    // Eski grafiği temizle
+    if (umayChatInstance.charts.precipitationLineChart) {
+        umayChatInstance.charts.precipitationLineChart.destroy();
+    }
+    
+    umayChatInstance.charts.precipitationLineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hours.filter((_, i) => i % 3 === 0), // Her 3 saatte bir göster
+            datasets: [
+                {
+                    label: 'Yağış (mm)',
+                    data: precipitation.filter((_, i) => i % 3 === 0),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#EAEAEA',
+                        font: { size: 10 }
+                    }
+                }
+            },
+            scales: {
+                x: {
                     ticks: { color: '#A0A0A0', font: { size: 9 } },
                     grid: { color: 'rgba(255, 255, 255, 0.05)' }
                 },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    ticks: { color: '#A0A0A0', font: { size: 9 } },
-                    grid: { drawOnChartArea: false }
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        color: '#A0A0A0', 
+                        font: { size: 9 },
+                        callback: function(value) {
+                            return value + ' mm';
+                        }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
                 }
             },
             animation: {

@@ -90,6 +90,9 @@ async function loadWeatherData(umayChatInstance) {
         if (umayChatInstance.charts.apparentTemperatureChart) {
             umayChatInstance.charts.apparentTemperatureChart.destroy();
         }
+        if (umayChatInstance.charts.precipitationLineChart) {
+            umayChatInstance.charts.precipitationLineChart.destroy();
+        }
         if (umayChatInstance.charts.precipitationChart) {
             umayChatInstance.charts.precipitationChart.destroy();
         }
@@ -117,6 +120,10 @@ async function loadWeatherData(umayChatInstance) {
                         <canvas id="apparentTemperatureChart"></canvas>
                     </div>
                     <div class="weather-apparent-temp-chart-container">
+                        <div class="weather-chart-title">🌧️ Yağış Grafiği (24 Saat)</div>
+                        <canvas id="precipitationLineChart"></canvas>
+                    </div>
+                    <div class="weather-apparent-temp-chart-container">
                         <div class="weather-chart-title">🌧️ Yağış Miktarları</div>
                         <canvas id="precipitationChart"></canvas>
                     </div>
@@ -136,10 +143,11 @@ async function loadWeatherData(umayChatInstance) {
             </div>
         `;
         
-        // 24 saatlik grafik oluştur (örnek veri)
+        // 24 saatlik grafik oluştur
         setTimeout(() => {
             createWeatherChart(umayChatInstance, weatherData);
             createApparentTemperatureChart(umayChatInstance, weatherData);
+            createPrecipitationLineChart(umayChatInstance, weatherData);
             createPrecipitationChart(umayChatInstance, weatherData);
             createWindChart(umayChatInstance, weatherData);
         }, 100);
@@ -227,7 +235,7 @@ async function loadSoilData(umayChatInstance) {
         
         // Tüm özellikleri döngü ile ekle (grafikleri olanlar hariç)
         for (const [key, value] of Object.entries(soilData)) {
-            if (key !== 'soil_type' && key !== 'soil_code' && key !== 'description' && value !== 'N/A' && value !== null) {
+            if (key !== 'soil_type' && key !== 'soil_code' && key !== 'description' && key !== 'soil_id' && value !== 'N/A' && value !== null) {
                 // Kil, silt, kum kontrolü (sadece Toprak Bileşimi grafiği için)
                 if (key === 'Clay') hasClay = true;
                 if (key === 'Silt') hasSilt = true;
@@ -347,7 +355,6 @@ async function loadSoilData(umayChatInstance) {
             <div class="soil-data">
                 <div class="soil-main">
                     <div class="soil-type">${soilData.soil_type || 'Bilinmiyor'}</div>
-                    <div class="soil-desc">${soilData.description || 'Toprak analizi yapılamadı'}</div>
                 </div>
                 ${chartsHTML ? `<div class="soil-charts-container">${chartsHTML}</div>` : ''}
                 <div class="soil-details">
