@@ -76,6 +76,14 @@ class UmayChat {
             });
         }
         
+        // Sidebar kapatma düğmesi olayı
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => {
+                this.toggleSidebar(); // Sidebar'ı kapat
+            });
+        }
+        
         // Hava durumu düğmesi
         if (this.weatherBtn) {
             this.weatherBtn.addEventListener('click', () => this.loadWeatherData());
@@ -497,6 +505,8 @@ class UmayChat {
     toggleSidebar() {
         if (this.chatSidebar) {
             this.chatSidebar.classList.toggle('open');
+            // Body'ye class ekle/çıkar (toggle butonunu gizlemek için)
+            document.body.classList.toggle('sidebar-open');
         }
     }
     

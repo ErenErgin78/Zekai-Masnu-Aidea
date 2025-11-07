@@ -430,3 +430,153 @@ async function loadSoilData(umayChatInstance) {
     }
 }
 
+/**
+ * Kullanıcı girişi yapar ve token alır
+ * @param {string} username - Kullanıcı adı
+ * @param {string} password - Şifre
+ * @returns {Promise<Object>} Token bilgisi {access_token, token_type}
+ */
+async function loginUser(username, password) {
+    try {
+        // FormData oluştur (OAuth2PasswordRequestForm formatı)
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        
+        // API'ye istek gönder (Backend API port 8000'de çalışıyor)
+        const response = await fetch('http://localhost:8000/users/token', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Giriş başarısız' }));
+            throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Login API response:', data);
+        
+        // Token'ı localStorage'a kaydet
+        if (data.access_token) {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('token_type', data.token_type || 'bearer');
+            console.log('Token localStorage\'a kaydedildi');
+        } else {
+            console.warn('Token bulunamadı response\'da:', data);
+        }
+        
+        return data;
+        
+    } catch (error) {
+        console.error('Login API hatası:', error);
+        // Network hatası kontrolü
+        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            throw new Error('Backend API\'ye bağlanılamadı. Lütfen API\'nin çalıştığından emin olun (port 8000).');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Kullanıcı kaydı yapar
+ * @param {string} full_name - Ad soyad
+ * @param {string} username - Kullanıcı adı
+ * @param {string} password - Şifre
+ * @returns {Promise<Object>} Kullanıcı bilgisi
+ */
+async function registerUser(full_name, username, password) {
+    try {
+        // API'ye istek gönder (Backend API port 8000'de çalışıyor)
+        const response = await fetch('http://localhost:8000/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                full_name: full_name,
+                username: username,
+                password: password
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Kayıt başarısız' }));
+            throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        return data;
+        
+    } catch (error) {
+        console.error('Register API hatası:', error);
+        // Network hatası kontrolü
+        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            throw new Error('Backend API\'ye bağlanılamadı. Lütfen API\'nin çalıştığından emin olun (port 8000).');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Mevcut kullanıcı bilgilerini alır (token gerektirir)
+ * @returns {Promise<Object>} Kullanıcı bilgisi
+ */
+async function getCurrentUser() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            throw new Error('Token bulunamadı');
+        }
+        
+        const tokenType = localStorage.getItem('token_type') || 'bearer';
+        
+        // API'ye istek gönder (Backend API port 8000'de çalışıyor)
+        const response = await fetch('http://localhost:8000/users/me', {
+            method: 'GET',
+            headers: {
+                'Authorization': `${tokenType} ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Token geçersiz, temizle
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('token_type');
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        return data;
+        
+    } catch (error) {
+        console.error('Get current user API hatası:', error);
+        // Network hatası kontrolü - sessizce başarısız ol, kullanıcıyı rahatsız etme
+        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            // Token'ı temizle çünkü API'ye ulaşılamıyor
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('token_type');
+            throw new Error('API bağlantı hatası');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Kullanıcı çıkışı yapar (token'ı temizler)
+ */
+function logoutUser() {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token_type');
+}
+
+/**
+ * Kullanıcının giriş yapıp yapmadığını kontrol eder
+ * @returns {boolean} Giriş yapılmışsa true
+ */
+function isUserLoggedIn() {
+    return !!localStorage.getItem('access_token');
+}
+

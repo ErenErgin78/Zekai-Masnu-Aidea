@@ -64,10 +64,22 @@ body {
     z-index: 1;
 }
 
-.theme-btn-top {
+/* Top Buttons Container */
+.top-buttons {
     position: fixed;
     top: clamp(1rem, 2vh, 1.5rem);
     right: clamp(1rem, 3vw, 2rem);
+    display: flex;
+    align-items: center;
+    gap: clamp(0.5rem, 1.2vw, 0.75rem);
+    z-index: 1000;
+}
+
+.theme-btn-top {
+    position: fixed;
+    bottom: clamp(1rem, 2vh, 1.5rem);
+    right: clamp(1rem, 3vw, 2rem);
+    z-index: 1000;
     background: var(--bg-glass);
     border: 1px solid var(--border-color);
     cursor: pointer;
@@ -76,7 +88,7 @@ body {
     transition: all 0.3s ease;
     color: var(--text-secondary);
     backdrop-filter: blur(10px);
-    z-index: 1000;
+    box-shadow: var(--shadow);
 }
 
 .theme-btn-top:hover {
@@ -90,6 +102,85 @@ body {
     font-size: clamp(1.2rem, 2.5vw, 1.5rem);
 }
 
+/* Top Buttons Container */
+.top-buttons {
+    position: fixed;
+    top: clamp(1rem, 2vh, 1.5rem);
+    right: clamp(1rem, 3vw, 2rem);
+    display: flex;
+    align-items: center;
+    gap: clamp(0.5rem, 1.2vw, 0.75rem);
+    z-index: 1000;
+}
+
+/* Auth Buttons */
+.auth-buttons {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.5rem, 1.2vw, 0.75rem);
+}
+
+.auth-btn-top {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    padding: clamp(0.5rem, 1.2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    display: inline-block;
+}
+
+.auth-btn-top:hover {
+    background: var(--bg-glass-hover);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.auth-btn-top.register-btn {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.auth-btn-top.register-btn:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.auth-btn-top.logout-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.auth-btn-top.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* User Info */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.5rem, 1.2vw, 0.75rem);
+}
+
+.user-name {
+    color: var(--text-primary);
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+    font-weight: 500;
+    padding: clamp(0.5rem, 1.2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(10px);
+}
 
 /* Panels Container */
 .panels-container {
@@ -150,10 +241,38 @@ body {
     transition: left 0.3s ease;
     z-index: 999;
     box-shadow: var(--shadow-xl);
+    /* Özel scrollbar stilleri */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+}
+
+.chat-sidebar::-webkit-scrollbar {
+    width: clamp(0.25rem, 0.5vw, 0.375rem);
+}
+
+.chat-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-sidebar::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: clamp(0.125rem, 0.3vw, 0.1875rem);
+}
+
+.chat-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover);
 }
 
 .chat-sidebar.open {
     left: 0;
+}
+
+/* Sidebar açıldığında toggle butonunu gizle */
+body.sidebar-open .sidebar-toggle {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.8);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .chat-header-sidebar {
@@ -162,11 +281,43 @@ body {
     background: var(--bg-glass);
 }
 
+.chat-header-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: clamp(0.75rem, 1.5vh, 1rem);
+}
+
 .chat-header-sidebar h3 {
     font-size: clamp(1rem, 2.2vw, 1.25rem);
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: clamp(0.75rem, 1.5vh, 1rem);
+    margin: 0;
+}
+
+.close-sidebar-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: clamp(0.375rem, 0.8vw, 0.5rem);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(1.75rem, 3.5vw, 2rem);
+    height: clamp(1.75rem, 3.5vw, 2rem);
+}
+
+.close-sidebar-btn:hover {
+    background: var(--bg-glass-hover);
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.close-sidebar-btn i {
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
 }
 
 .new-chat-btn {

@@ -12,6 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
@@ -27,10 +30,28 @@
         <!-- UMAY Logo -->
         <img src="static/img/UMAY.png" alt="UMAY" class="main-logo">
         
-        <!-- Tema Butonu -->
+        <!-- Tema Butonu (Sağ Alt Köşe) -->
         <button id="themeToggle" class="theme-btn-top" title="Tema Değiştir">
             <span class="theme-icon">🎨</span>
         </button>
+        
+        <!-- Üst butonlar (Auth) -->
+        <div class="top-buttons">
+            <!-- Auth Butonları -->
+            <div id="authButtons" class="auth-buttons" style="display: none;">
+                <a href="login.html" class="auth-btn-top">Giriş Yap</a>
+                <a href="register.html" class="auth-btn-top register-btn">Kayıt Ol</a>
+            </div>
+            
+            <!-- Kullanıcı Bilgileri (Giriş yapıldığında görünür) -->
+            <div id="userInfo" class="user-info" style="display: none;">
+                <span id="userName" class="user-name"></span>
+                <button id="logoutBtn" class="auth-btn-top logout-btn" type="button">
+                    <i class="fas fa-sign-out-alt" style="margin-right: 0.5rem;"></i>
+                    Çıkış
+                </button>
+            </div>
+        </div>
         
         <!-- Sohbet kenar çubuğu düğmesi -->
         <button id="sidebarToggle" class="sidebar-toggle">
@@ -40,7 +61,12 @@
         <!-- Sohbet kenar çubuğu -->
         <div class="chat-sidebar" id="chatSidebar">
             <div class="chat-header-sidebar">
-                <h3>💬 Sohbetler</h3>
+                <div class="chat-header-title">
+                    <h3>💬 Sohbetler</h3>
+                    <button id="closeSidebarBtn" class="close-sidebar-btn" aria-label="Sidebar'ı kapat">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <button id="newChatBtn" class="new-chat-btn">+ Yeni Sohbet</button>
             </div>
             <div class="chat-list" id="chatList">
@@ -113,5 +139,54 @@
     <script src="static/js/api.js"></script>
     <script src="static/js/charts.js"></script>
     <script src="static/js/main.js"></script>
+    <script>
+        // Auth kontrolü ve UI güncellemesi
+        let logoutHandlerAttached = false;
+        
+        async function checkAuthStatus() {
+            const authButtons = document.getElementById('authButtons');
+            const userInfo = document.getElementById('userInfo');
+            const userName = document.getElementById('userName');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            if (isUserLoggedIn()) {
+                try {
+                    const user = await getCurrentUser();
+                    if (user) {
+                        // Kullanıcı bilgilerini göster
+                        if (authButtons) authButtons.style.display = 'none';
+                        if (userInfo) userInfo.style.display = 'flex';
+                        if (userName) userName.textContent = `👤 ${user.username}`;
+                    }
+                } catch (error) {
+                    console.error('Kullanıcı bilgisi alınamadı:', error);
+                    // Token geçersiz, giriş yapılmamış gibi göster
+                    if (authButtons) authButtons.style.display = 'flex';
+                    if (userInfo) userInfo.style.display = 'none';
+                    logoutUser(); // Geçersiz token'ı temizle
+                }
+            } else {
+                // Giriş yapılmamış, login/register butonlarını göster
+                if (authButtons) authButtons.style.display = 'flex';
+                if (userInfo) userInfo.style.display = 'none';
+            }
+            
+            // Çıkış butonu event listener (sadece bir kez ekle)
+            if (logoutBtn && !logoutHandlerAttached) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    logoutUser();
+                    // Ana sayfayı yenile
+                    window.location.reload();
+                });
+                logoutHandlerAttached = true;
+            }
+        }
+        
+        // Sayfa yüklendiğinde auth durumunu kontrol et
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
+        });
+    </script>
 </body>
 </html>

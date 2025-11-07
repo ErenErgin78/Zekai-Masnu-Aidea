@@ -63,7 +63,7 @@
     }
     
     .theme-btn-top {
-        top: clamp(0.5rem, 1.5vh, 0.75rem);
+        bottom: clamp(0.5rem, 1.5vh, 0.75rem);
         right: clamp(0.5rem, 2vw, 1rem);
         padding: clamp(0.5rem, 1.2vw, 0.625rem);
     }
@@ -178,7 +178,7 @@
     }
     
     .theme-btn-top {
-        top: clamp(0.5rem, 1.5vh, 0.75rem);
+        bottom: clamp(0.5rem, 1.5vh, 0.75rem);
         right: clamp(0.5rem, 2vw, 0.75rem);
         padding: clamp(0.5rem, 1.2vw, 0.625rem);
     }
