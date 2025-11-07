@@ -275,6 +275,62 @@ def root():
     
     return HTMLResponse(content=html_content)
 
+@app.get("/login.html", response_class=HTMLResponse)
+def login():
+    """Serve the Frontend login.html with cache-busting"""
+    login_path = os.path.join(PathConfig.FRONTEND_DIR, "login.html")
+    
+    # HTML dosyasını oku
+    with open(login_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    # Cache-busting için timestamp
+    timestamp = int(time.time())
+    cache_param = f"?v={timestamp}"
+    
+    # CSS ve JS dosya URL'lerine cache-busting parametresi ekle
+    html_content = re.sub(
+        r'(href=["\']static/css/[^"\']+\.css)(\?v=\d+)?(["\'])',
+        rf'\1{cache_param}\3',
+        html_content
+    )
+    
+    html_content = re.sub(
+        r'(src=["\']static/js/[^"\']+\.js)(\?v=\d+)?(["\'])',
+        rf'\1{cache_param}\3',
+        html_content
+    )
+    
+    return HTMLResponse(content=html_content)
+
+@app.get("/register.html", response_class=HTMLResponse)
+def register_page():
+    """Serve the Frontend register.html with cache-busting"""
+    register_path = os.path.join(PathConfig.FRONTEND_DIR, "register.html")
+    
+    # HTML dosyasını oku
+    with open(register_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    # Cache-busting için timestamp
+    timestamp = int(time.time())
+    cache_param = f"?v={timestamp}"
+    
+    # CSS ve JS dosya URL'lerine cache-busting parametresi ekle
+    html_content = re.sub(
+        r'(href=["\']static/css/[^"\']+\.css)(\?v=\d+)?(["\'])',
+        rf'\1{cache_param}\3',
+        html_content
+    )
+    
+    html_content = re.sub(
+        r'(src=["\']static/js/[^"\']+\.js)(\?v=\d+)?(["\'])',
+        rf'\1{cache_param}\3',
+        html_content
+    )
+    
+    return HTMLResponse(content=html_content)
+
 @app.get("/manifest.json")
 async def manifest():
     return FileResponse(os.path.join(PathConfig.FRONTEND_DIR, "manifest.json"))

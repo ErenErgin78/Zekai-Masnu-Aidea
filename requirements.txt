@@ -134,6 +134,10 @@ transformers>=4.36.0
 tokenizers>=0.15.0
 tiktoken>=0.4.0
 
+# Cache Dependencies
+fastapi-cache2
+redis
+
 # Development Tools
 # pytest>=7.4.0
 # black>=23.12.0

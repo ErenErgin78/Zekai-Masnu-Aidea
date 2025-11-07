@@ -256,7 +256,7 @@ class OrganicFarmingChatBot:
 
 📍 KOORDINAT ALMA STRATEJİSİ:
 - "Bu bölgede", "şu koordinatlarda", "İstanbul'da" gibi ifadelerde koordinatları ara
-- Koordinat yoksa kullanıcıdan iste: "Hangi bölge/koordinat için analiz yapayım?"
+- Koordinat verilmediyse kullanıcının kendi konumundaki bilgileri istediğini varsay ve otomatik mevcut konuma göre işlem yap.
 - Mevcut konum için: get_automatic_location_soil kullan
 
 🚫 ÇOK ÖNEMLİ KURAL:
