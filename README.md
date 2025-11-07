@@ -20,6 +20,7 @@ Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mim
 - **Toprak Analizi API:** `/soiltype/analyze` ile koordinatlardan toprak bilgisi
 - **Hava Durumu API:** `/weather/` altındaki uçlarla meteorolojik veriler
 - **ML Öneri API:** `/ml/analyze` ile toprak+iklim verisine göre ürün önerisi
+- **Auth API:** `/register` ve `/users/token` ile kullanıcı kayıt ve giriş sistemi (JWT token tabanlı)
 - **RAG Bilgi**: PDF/doküman tabanlı bilgi çıkarımı (LLM üzerinden kullanılır)
 
 ### 2. Bilgi Bankası (RAG – Retrieval Augmented Generation)
@@ -78,6 +79,9 @@ Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mim
 - **HuggingFace** - Embedding modelleri
 - **HWSD2** - Toprak veritabanı
 - **Random Forest** - Makine öğrenmesi modeli
+- **JWT** - Token tabanlı kimlik doğrulama
+- **MongoDB** - Kullanıcı veritabanı
+- **bcrypt** - Şifre hashleme
 
 ### Frontend  
 - **HTML5, CSS3, JavaScript** - Modern web teknolojileri
@@ -97,6 +101,7 @@ Proje, tamamen yazılım tabanlı olup dört ana katmandan oluşan sanal bir mim
 ```bash
 Python 3.8+
 Git
+MongoDB (kullanıcı veritabanı için)
 ```
 
 ### Adım 1: Projeyi İndirin
@@ -121,7 +126,11 @@ pip install -r requirements.txt
 ```bash
 # .env dosyası oluşturun
 GEMINI_API_KEY=your_gemini_api_key_here
+SECRET_KEY=your_secret_key_here
+ALGORITHM=HS256
 ```
+
+**Not:** `SECRET_KEY` için güvenli bir rastgele string kullanın (örn: `openssl rand -hex 32` ile oluşturabilirsiniz).
 
 ### Adım 4: Sistemi Başlatın
 
@@ -164,13 +173,22 @@ Zekai-Masnu-Aidea/
 │   ├── API/           # FastAPI servisleri
 │   │   ├── SoilType/  # Toprak analizi
 │   │   ├── Weather/   # Hava durumu
-│   │   └── MachineLearning/ # ML modelleri
+│   │   ├── Auth/      # Kullanıcı kimlik doğrulama
+│   │   └── MachineLearning/ # ML modeli
 │   └── RAG/           # Bilgi bankası sistemi
 ├── LLM/               # Yapay zeka modelleri
 │   ├── tools/         # Araçlar
 │   ├── agents/        # Agent'lar
 │   └── chains/        # Zincirler
 ├── Frontend/          # Web arayüzü
+│   ├── index.html     # Ana sayfa
+│   ├── login.html     # Giriş sayfası
+│   ├── register.html  # Kayıt sayfası
+│   ├── manifest.json  # PWA manifest
+│   └── static/        # Statik dosyalar
+│       ├── css/       # Stil dosyaları
+│       ├── img/       # Görseller
+│       └── js/        # JavaScript dosyaları
 └── requirements.txt   # Python bağımlılıkları
 ```
 
